@@ -1,0 +1,8 @@
+logging:
+  level:
+    com.payments: INFO
+    root: WARN
+
+spring:
+  jpa:
+    show-sql: false

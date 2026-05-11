@@ -1,0 +1,12 @@
+logging:
+  level:
+    com.payments: INFO
+    root: WARN
+
+spring:
+  jpa:
+    show-sql: false
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
