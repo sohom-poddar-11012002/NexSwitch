@@ -3,7 +3,6 @@ package com.payments.domain.model.vo;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
-import java.util.Objects;
 
 public record Money(BigDecimal amount, Currency currency) {
 
