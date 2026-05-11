@@ -1,0 +1,43 @@
+name: Feature
+description: New feature or enhancement
+labels: ["feat"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: One line — what does this add?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: Why is this needed? Which sprint week / milestone does it belong to?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      options:
+        - domain
+        - adapters
+        - application
+        - service
+        - frontend
+        - infra/ci
+    validations:
+      required: true

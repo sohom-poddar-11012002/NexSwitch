@@ -1,0 +1,49 @@
+name: Bug
+description: Something is broken
+labels: ["fix"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: One line — what is broken?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+      placeholder: Paste logs, stack trace, or error message here
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - critical (prod down)
+        - high (feature broken)
+        - medium (degraded)
+        - low (cosmetic)
+    validations:
+      required: true
