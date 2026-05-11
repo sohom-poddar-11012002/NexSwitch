@@ -1,0 +1,46 @@
+# Secrets — NEVER commit
+.env
+*.key
+*.pem
+*.p12
+*.jks
+
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+*.class
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+
+# Docker volumes (generated)
+pgdata/
+
+# Frontend build artifacts
+frontend/*/node_modules/
+frontend/*/dist/
+frontend/*/.vite/
+
+# LocalStack data
+.localstack/
+
+# SoftHSM2 tokens (never commit HSM state)
+softhsm2-tokens/
+softhsm2.conf
+
+# Claude Code — local tooling state, not project source
+.claude/
+.dual-graph/

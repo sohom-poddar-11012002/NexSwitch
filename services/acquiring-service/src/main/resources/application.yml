@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: acquiring-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/payments}
+    username: ${DB_USERNAME:payments_app}
+    password: ${DB_PASSWORD:local_dev_password}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 2000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true   # acquiring-service is the SOLE Flyway owner
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:local_dev_password}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 3
+      enable-idempotence: true
+      compression-type: snappy
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      isolation-level: read_committed
+
+  security:
+    enabled: false   # disabled during skeleton phase
+
+server:
+  port: 8080
+
+iso8583:
+  port: 8000
+
+upstream:
+  provider: ${UPSTREAM_PROVIDER:wiremock}
+
+hsm:
+  provider: ${HSM_PROVIDER:mock}
+
+storage:
+  provider: ${STORAGE_PROVIDER:local}
+
+qr:
+  session:
+    ttl-minutes: 5
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,redis

@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: webhook-dispatcher
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/payments}
+    username: ${DB_USERNAME:payments_app}
+    password: ${DB_PASSWORD:local_dev_password}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 3000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: false   # acquiring-service owns all schema migrations
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:local_dev_password}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 3
+      enable-idempotence: true
+      compression-type: snappy
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      isolation-level: read_committed
+
+server:
+  port: 
+
+upstream:
+  provider: ${UPSTREAM_PROVIDER:wiremock}
+
+hsm:
+  provider: ${HSM_PROVIDER:mock}
+
+storage:
+  provider: ${STORAGE_PROVIDER:local}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
