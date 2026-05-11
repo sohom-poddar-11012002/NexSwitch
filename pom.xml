@@ -36,7 +36,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- Spring Boot -->
-        <spring-boot.version>3.4.7</spring-boot.version>
+        <spring-boot.version>3.5.14</spring-boot.version>
 
         <!-- Dependencies NOT in Spring Boot BOM -->
         <jpos.version>2.1.9</jpos.version>
