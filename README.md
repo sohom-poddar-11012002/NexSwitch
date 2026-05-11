@@ -164,12 +164,18 @@ java -jar tools/terminal-simulator/target/terminal-simulator-*.jar
 ```
 
 **Local endpoints:**
-- Payment Simulator UI: http://localhost:3000
-- Merchant Dashboard: http://localhost:3001
-- Ops Dashboard: http://localhost:3002
-- Acquiring REST API: http://localhost:8080
-- MailHog (email): http://localhost:8025
-- Jaeger (traces): http://localhost:16686
+
+| Endpoint | URL |
+|---|---|
+| Payment Simulator UI | http://localhost:3000 |
+| Merchant Dashboard | http://localhost:3001 |
+| Ops Dashboard | http://localhost:3002 |
+| Acquiring REST API | http://localhost:8080 |
+| Acquiring ISO 8583 TCP | localhost:8000 |
+| Payment Switch | http://localhost:8100 |
+| MailHog (email UI) | http://localhost:8025 |
+| Jaeger (traces UI) | http://localhost:16686 |
+| LocalStack (S3) | http://localhost:4566 |
 
 ---
 
