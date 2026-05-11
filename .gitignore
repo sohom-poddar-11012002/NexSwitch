@@ -44,3 +44,6 @@ softhsm2.conf
 # Claude Code — local tooling state, not project source
 .claude/
 .dual-graph/
+
+# Project requirements doc — contains personal info, kept local only
+CLAUDE.md
