@@ -1,17 +1,17 @@
 # Sprint Context
 
 ## Current Task
-Working on #5 — domain value objects (Money, MerchantId, TerminalId, PanHash, AuthorizationCode, ARN, STAN)
+Working on #6 — domain models (Transaction record, TransactionStatus enum, PaymentMethod, PaymentNetwork, and supporting records)
 
 ## Where We Are
 - Skeleton scaffolded: all 14 Maven modules compile, `mvn install` GREEN (commit 7b7d6e7)
 - GitHub Issues #5–#18 created across Week 1 (Foundation) and Week 2 (Golden Path) milestones
-- Branch: `feat/5-domain-value-objects`
-- No implementation written yet — starting TDD on domain value objects
+- Branch: `feat/5-domain-value-objects` → PR #19 open, ready to merge → closes #5
+- Value objects fully implemented and tested (88 tests, JaCoCo ≥90%)
 
 ## Ticket Order (Week 1)
-- [ ] #5  domain value objects ← **CURRENT**
-- [ ] #6  domain models (Transaction, TransactionStatus, enums)
+- [x] #5  domain value objects ← **DONE — PR #19**
+- [ ] #6  domain models (Transaction, TransactionStatus, enums) ← **NEXT**
 - [ ] #7  all ports (inbound + outbound + FraudScoringPort)
 - [ ] #8  TransactionStateMachine
 - [ ] #9  FraudEngine
@@ -22,8 +22,8 @@ Working on #5 — domain value objects (Money, MerchantId, TerminalId, PanHash, 
 - [ ] #14 test-support fixtures + Testcontainers
 
 ## Next Steps
-1. Write failing tests for Money, MerchantId, TerminalId, PanHash, AuthorizationCode, ARN, STAN
-2. Implement value objects to make tests pass
-3. `mvn test -pl domain` GREEN, JaCoCo ≥90%
-4. Open PR → squash merge → closes #5
-5. Move to #6
+1. Squash-merge PR #19 → closes #5
+2. Create branch `feat/6-domain-models`
+3. TDD: Transaction record, TransactionStatus (20 states), PaymentMethod, PaymentNetwork, QRSession, RoutingRule, BinInfo, MerchantProfile, ChargebackRecord, SettlementBatch, ReconciliationRun
+4. `mvn test -pl domain` GREEN
+5. Open PR → squash merge → closes #6
