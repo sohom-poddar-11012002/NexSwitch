@@ -9,6 +9,9 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+# ─── Stage 1: Test ────────────────────────────────────────────────────────────
+# Runs on every push and PR. This is the gate for merging to main.
+
 jobs:
   test:
     name: Build & Test
@@ -55,6 +58,9 @@ jobs:
           name: jacoco-reports
           path: '**/target/site/jacoco'
 
+# ─── Stage 2: Integration Tests ───────────────────────────────────────────────
+# Runs on main merges only. Testcontainers spins up real Postgres/Redis/Kafka.
+
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -74,11 +80,18 @@ jobs:
       - name: Run integration tests (Testcontainers)
         run: mvn verify -P integration-tests --batch-mode --no-transfer-progress
 
+# ─── Stage 3: Build & Push ────────────────────────────────────────────────────
+# Builds Docker images tagged with git SHA and pushes to ECR.
+# Gated by DEPLOY_ENABLED repo variable — set to 'true' when AWS is ready.
+
   build-push:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
     needs: integration-test
     if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+
+    outputs:
+      image-tag: ${{ github.sha }}
 
     steps:
       - uses: actions/checkout@v4
@@ -94,18 +107,30 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push all service images
+      - name: Build and push images (tagged with SHA + latest)
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker compose build
           docker compose push
+          # Also tag as latest for dev convenience
+          for service in acquiring-service payment-switch webhook-dispatcher \
+                         notification-service chargeback-service mock-upstream \
+                         settlement-service reconciliation-service merchant-simulator; do
+            docker tag $ECR_REGISTRY/$service:$IMAGE_TAG $ECR_REGISTRY/$service:latest
+            docker push $ECR_REGISTRY/$service:latest
+          done
 
-  deploy:
-    name: Deploy to ECS Fargate
+# ─── Stage 4a: Deploy → dev ───────────────────────────────────────────────────
+# Auto-deploys to the dev ECS cluster. No approval needed.
+
+  deploy-dev:
+    name: Deploy → dev
     runs-on: ubuntu-latest
     needs: build-push
     if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    environment: dev
 
     steps:
       - uses: actions/checkout@v4
@@ -117,7 +142,87 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      - name: Force new ECS deployments (rolling update)
+      - name: Deploy to dev ECS cluster
+        run: |
+          for service in acquiring-service payment-switch webhook-dispatcher \
+                         notification-service chargeback-service; do
+            aws ecs update-service \
+              --cluster payments-platform-dev \
+              --service $service \
+              --force-new-deployment \
+              --no-cli-pager
+          done
+
+      - name: Wait for dev services to stabilise
+        run: |
+          for service in acquiring-service payment-switch; do
+            aws ecs wait services-stable \
+              --cluster payments-platform-dev \
+              --services $service
+          done
+
+# ─── Stage 4b: Deploy → qa ────────────────────────────────────────────────────
+# Auto-deploys to qa after dev is stable. No approval needed.
+# Same image SHA as dev — promotes the exact same artifact.
+
+  deploy-qa:
+    name: Deploy → qa
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    environment: qa
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Deploy to qa ECS cluster
+        run: |
+          for service in acquiring-service payment-switch webhook-dispatcher \
+                         notification-service chargeback-service; do
+            aws ecs update-service \
+              --cluster payments-platform-qa \
+              --service $service \
+              --force-new-deployment \
+              --no-cli-pager
+          done
+
+      - name: Wait for qa services to stabilise
+        run: |
+          for service in acquiring-service payment-switch; do
+            aws ecs wait services-stable \
+              --cluster payments-platform-qa \
+              --services $service
+          done
+
+# ─── Stage 4c: Deploy → prod ──────────────────────────────────────────────────
+# REQUIRES MANUAL APPROVAL. Pauses here — you review and approve in GitHub UI.
+# Same image SHA as dev/qa — no rebuild, same artifact all the way through.
+
+  deploy-prod:
+    name: Deploy → prod
+    runs-on: ubuntu-latest
+    needs: deploy-qa
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    environment: prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Deploy to prod ECS cluster
         run: |
           for service in acquiring-service payment-switch webhook-dispatcher \
                          notification-service chargeback-service; do
@@ -126,4 +231,12 @@ jobs:
               --service $service \
               --force-new-deployment \
               --no-cli-pager
+          done
+
+      - name: Wait for prod services to stabilise
+        run: |
+          for service in acquiring-service payment-switch; do
+            aws ecs wait services-stable \
+              --cluster payments-platform \
+              --services $service
           done
