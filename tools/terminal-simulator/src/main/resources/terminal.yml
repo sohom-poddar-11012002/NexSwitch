@@ -1,0 +1,7 @@
+terminal:
+  id: TERM0042
+  merchant-id: MERCH0000999
+  switch-host: localhost
+  switch-port: 8000
+  timeout-ms: 15000
+  scenario: NORMAL_PURCHASE
