@@ -46,6 +46,7 @@ class TransactionStatusTest {
         }
     }
 
+    @SuppressWarnings("unused")
     static Stream<Object[]> validTransitions() {
         return Stream.of(
             new Object[]{INITIATED,             AUTHORIZATION_PENDING},
@@ -81,6 +82,7 @@ class TransactionStatusTest {
         );
     }
 
+    @SuppressWarnings("unused")
     static Stream<Object[]> invalidTransitions() {
         return Stream.of(
             new Object[]{INITIATED,             AUTHORIZED},
