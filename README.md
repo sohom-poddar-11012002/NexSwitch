@@ -171,7 +171,7 @@ java -jar tools/terminal-simulator/target/terminal-simulator-*.jar
 | Merchant Dashboard | http://localhost:3001 |
 | Ops Dashboard | http://localhost:3002 |
 | Acquiring REST API | http://localhost:8080 |
-| Acquiring ISO 8583 TCP | localhost:8000 |
+| Acquiring ISO 8583 TCP | http://localhost:8000 |
 | Payment Switch | http://localhost:8100 |
 | MailHog (email UI) | http://localhost:8025 |
 | Jaeger (traces UI) | http://localhost:16686 |
