@@ -65,8 +65,7 @@
                                     </limits>
                                 </rule>
                             </rules>
-                            <!-- Only enforce once implementations exist; skip on empty skeleton -->
-                            <haltOnFailure>false</haltOnFailure>
+                            <haltOnFailure>true</haltOnFailure>
                         </configuration>
                     </execution>
                 </executions>
