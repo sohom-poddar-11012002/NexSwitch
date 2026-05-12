@@ -2,9 +2,7 @@ package com.payments.domain.model;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import java.util.stream.Stream;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static com.payments.domain.model.TransactionStatus.*;
 import static org.assertj.core.api.Assertions.*;
@@ -17,13 +15,58 @@ class TransactionStatusTest {
     }
 
     @ParameterizedTest
-    @MethodSource("validTransitions")
+    @CsvSource({
+        "INITIATED,             AUTHORIZATION_PENDING",
+        "INITIATED,             DECLINED",
+        "AUTHORIZATION_PENDING, AUTHORIZED",
+        "AUTHORIZATION_PENDING, DECLINED",
+        "AUTHORIZATION_PENDING, REVERSAL_PENDING",
+        "AUTHORIZATION_PENDING, UNKNOWN",
+        "AUTHORIZED,            CAPTURED",
+        "AUTHORIZED,            REVERSAL_PENDING",
+        "AUTHORIZED,            REFUND_INITIATED",
+        "CAPTURED,              SETTLEMENT_PENDING",
+        "CAPTURED,              REFUND_INITIATED",
+        "REVERSAL_PENDING,      REVERSED",
+        "REVERSAL_PENDING,      UNKNOWN",
+        "UNKNOWN,               AUTHORIZED",
+        "UNKNOWN,               REVERSED",
+        "UNKNOWN,               DECLINED",
+        "REFUND_INITIATED,      REFUND_PENDING",
+        "REFUND_INITIATED,      REFUND_FAILED",
+        "REFUND_PENDING,        REFUNDED",
+        "REFUND_PENDING,        REFUND_FAILED",
+        "SETTLEMENT_PENDING,    RECONCILED",
+        "RECONCILED,            PAID_OUT",
+        "RECONCILED,            CHARGEBACK_RECEIVED",
+        "PAID_OUT,              CHARGEBACK_RECEIVED",
+        "PAID_OUT,              REFUND_INITIATED",
+        "CHARGEBACK_RECEIVED,   CHARGEBACK_CONTESTED",
+        "CHARGEBACK_RECEIVED,   CHARGEBACK_LOST",
+        "CHARGEBACK_CONTESTED,  CHARGEBACK_EVIDENCE_SUBMITTED",
+        "CHARGEBACK_EVIDENCE_SUBMITTED, CHARGEBACK_WON",
+        "CHARGEBACK_EVIDENCE_SUBMITTED, CHARGEBACK_LOST"
+    })
     void validTransitionReturnsTrue(TransactionStatus from, TransactionStatus to) {
         assertThat(from.canTransitionTo(to)).isTrue();
     }
 
     @ParameterizedTest
-    @MethodSource("invalidTransitions")
+    @CsvSource({
+        "INITIATED,          AUTHORIZED",
+        "INITIATED,          CAPTURED",
+        "AUTHORIZED,         INITIATED",
+        "AUTHORIZED,         DECLINED",
+        "CAPTURED,           AUTHORIZED",
+        "CAPTURED,           REVERSAL_PENDING",
+        "DECLINED,           INITIATED",
+        "DECLINED,           AUTHORIZED",
+        "REVERSED,           AUTHORIZED",
+        "SETTLEMENT_PENDING, CAPTURED",
+        "RECONCILED,         SETTLEMENT_PENDING",
+        "CHARGEBACK_WON,     CHARGEBACK_RECEIVED",
+        "CHARGEBACK_LOST,    CHARGEBACK_RECEIVED"
+    })
     void invalidTransitionReturnsFalse(TransactionStatus from, TransactionStatus to) {
         assertThat(from.canTransitionTo(to)).isFalse();
     }
@@ -44,60 +87,5 @@ class TransactionStatusTest {
         for (TransactionStatus status : TransactionStatus.values()) {
             assertThat(status.canTransitionTo(status)).isFalse();
         }
-    }
-
-    @SuppressWarnings("unused")
-    static Stream<Object[]> validTransitions() {
-        return Stream.of(
-            new Object[]{INITIATED,             AUTHORIZATION_PENDING},
-            new Object[]{INITIATED,             DECLINED},
-            new Object[]{AUTHORIZATION_PENDING, AUTHORIZED},
-            new Object[]{AUTHORIZATION_PENDING, DECLINED},
-            new Object[]{AUTHORIZATION_PENDING, REVERSAL_PENDING},
-            new Object[]{AUTHORIZATION_PENDING, UNKNOWN},
-            new Object[]{AUTHORIZED,            CAPTURED},
-            new Object[]{AUTHORIZED,            REVERSAL_PENDING},
-            new Object[]{AUTHORIZED,            REFUND_INITIATED},
-            new Object[]{CAPTURED,              SETTLEMENT_PENDING},
-            new Object[]{CAPTURED,              REFUND_INITIATED},
-            new Object[]{REVERSAL_PENDING,      REVERSED},
-            new Object[]{REVERSAL_PENDING,      UNKNOWN},
-            new Object[]{UNKNOWN,               AUTHORIZED},
-            new Object[]{UNKNOWN,               REVERSED},
-            new Object[]{UNKNOWN,               DECLINED},
-            new Object[]{REFUND_INITIATED,      REFUND_PENDING},
-            new Object[]{REFUND_INITIATED,      REFUND_FAILED},
-            new Object[]{REFUND_PENDING,        REFUNDED},
-            new Object[]{REFUND_PENDING,        REFUND_FAILED},
-            new Object[]{SETTLEMENT_PENDING,    RECONCILED},
-            new Object[]{RECONCILED,            PAID_OUT},
-            new Object[]{RECONCILED,            CHARGEBACK_RECEIVED},
-            new Object[]{PAID_OUT,              CHARGEBACK_RECEIVED},
-            new Object[]{PAID_OUT,              REFUND_INITIATED},
-            new Object[]{CHARGEBACK_RECEIVED,   CHARGEBACK_CONTESTED},
-            new Object[]{CHARGEBACK_RECEIVED,   CHARGEBACK_LOST},
-            new Object[]{CHARGEBACK_CONTESTED,  CHARGEBACK_EVIDENCE_SUBMITTED},
-            new Object[]{CHARGEBACK_EVIDENCE_SUBMITTED, CHARGEBACK_WON},
-            new Object[]{CHARGEBACK_EVIDENCE_SUBMITTED, CHARGEBACK_LOST}
-        );
-    }
-
-    @SuppressWarnings("unused")
-    static Stream<Object[]> invalidTransitions() {
-        return Stream.of(
-            new Object[]{INITIATED,             AUTHORIZED},
-            new Object[]{INITIATED,             CAPTURED},
-            new Object[]{AUTHORIZED,            INITIATED},
-            new Object[]{AUTHORIZED,            DECLINED},
-            new Object[]{CAPTURED,              AUTHORIZED},
-            new Object[]{CAPTURED,              REVERSAL_PENDING},
-            new Object[]{DECLINED,              INITIATED},
-            new Object[]{DECLINED,              AUTHORIZED},
-            new Object[]{REVERSED,              AUTHORIZED},
-            new Object[]{SETTLEMENT_PENDING,    CAPTURED},
-            new Object[]{RECONCILED,            SETTLEMENT_PENDING},
-            new Object[]{CHARGEBACK_WON,        CHARGEBACK_RECEIVED},
-            new Object[]{CHARGEBACK_LOST,       CHARGEBACK_RECEIVED}
-        );
     }
 }
