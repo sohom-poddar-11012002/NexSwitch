@@ -12,18 +12,18 @@ Hexagonal architecture (Ports & Adapters) enforced at build time by ArchUnit. Th
 
 ```
 ┌─────────────────────────────────────────────┐
-│              Domain Core                     │
+│              Domain Core                    │
 │  Pure Java 21. Zero external dependencies.  │
 │  Models, Ports (interfaces), Services.      │
 └──────────────────┬──────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────┐
-│           Application Layer                  │
+│           Application Layer                 │
 │  Spring Boot wiring only. No business logic.│
 └──────────────────┬──────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────┐
-│            Adapters Layer                    │
+│            Adapters Layer                   │
 │  jPOS, SoftHSM2, Kafka, PostgreSQL,         │
 │  Redis, S3. Implements domain ports.        │
 └─────────────────────────────────────────────┘
