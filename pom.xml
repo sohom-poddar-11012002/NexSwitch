@@ -31,7 +31,7 @@
     </modules>
 
     <properties>
-        <java.version>26</java.version>
+        <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -185,7 +185,7 @@
     <build>
         <pluginManagement>
             <plugins>
-                <!-- Java 26 target, strict release flag -->
+                <!-- JDK 26 runtime, release 25 target — JaCoCo 0.8.13 tops out at class v69 (Java 25) -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
