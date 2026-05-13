@@ -1,5 +1,6 @@
 package com.payments.domain.model;
 
+import com.payments.domain.model.event.DomainEvent;
 import com.payments.domain.model.vo.*;
 import org.junit.jupiter.api.Test;
 
@@ -73,17 +74,17 @@ class TransactionTest {
         Transaction txn = sampleTransaction();
         assertThat(txn.domainEvents()).isEmpty();
 
-        txn.raiseEvent("transaction.initiated");
+        txn.raiseEvent(DomainEvent.of("transaction.initiated", txn.id().toString(), "TRANSACTION", INITIATED));
         assertThat(txn.domainEvents()).hasSize(1);
     }
 
     @Test
     void pullDomainEventsClearsTheList() {
         Transaction txn = sampleTransaction();
-        txn.raiseEvent("transaction.initiated");
-        txn.raiseEvent("transaction.authorization_pending");
+        txn.raiseEvent(DomainEvent.of("transaction.initiated", txn.id().toString(), "TRANSACTION", INITIATED));
+        txn.raiseEvent(DomainEvent.of("transaction.authorization_pending", txn.id().toString(), "TRANSACTION", AUTHORIZATION_PENDING));
 
-        List<String> events = txn.pullDomainEvents();
+        List<DomainEvent<?>> events = txn.pullDomainEvents();
         assertThat(events).hasSize(2);
         assertThat(txn.domainEvents()).isEmpty();
     }

@@ -3,6 +3,7 @@ package com.payments.domain.service;
 import com.payments.domain.exception.InvalidStateTransitionException;
 import com.payments.domain.model.Transaction;
 import com.payments.domain.model.TransactionStatus;
+import com.payments.domain.model.event.DomainEvent;
 
 import java.util.Objects;
 
@@ -17,7 +18,12 @@ public class TransactionStateMachine {
         }
 
         Transaction updated = transaction.withStatus(target);
-        updated.raiseEvent("transaction." + target.name().toLowerCase());
+        updated.raiseEvent(DomainEvent.of(
+            "transaction." + target.name().toLowerCase(),
+            transaction.id().toString(),
+            "TRANSACTION",
+            target
+        ));
         return updated;
     }
 }

@@ -1,5 +1,7 @@
 package com.payments.domain.model;
 
+import com.payments.domain.exception.InvalidStateTransitionException;
+import com.payments.domain.model.event.*;
 import com.payments.domain.model.vo.*;
 
 import java.time.Instant;
@@ -24,7 +26,7 @@ public final class Transaction {
     private final String responseCode;
     private final Instant createdAt;
     private final Instant updatedAt;
-    private final List<String> domainEvents;
+    private final List<DomainEvent<?>> domainEvents;
 
     private Transaction(Builder builder) {
         if (builder.id == null) throw new IllegalArgumentException("id must not be null");
@@ -55,6 +57,8 @@ public final class Transaction {
         this.domainEvents = new ArrayList<>(builder.domainEvents);
     }
 
+    // ── Accessors ─────────────────────────────────────────────────────────────
+
     public UUID id() { return id; }
     public MerchantId merchantId() { return merchantId; }
     public TerminalId terminalId() { return terminalId; }
@@ -69,7 +73,9 @@ public final class Transaction {
     public String responseCode() { return responseCode; }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }
-    public List<String> domainEvents() { return Collections.unmodifiableList(domainEvents); }
+    public List<DomainEvent<?>> domainEvents() { return Collections.unmodifiableList(domainEvents); }
+
+    // ── Functional "with" helpers (status change only — no events) ────────────
 
     public Transaction withStatus(TransactionStatus newStatus) {
         return toBuilder().status(newStatus).updatedAt(Instant.now()).build();
@@ -87,15 +93,112 @@ public final class Transaction {
         return toBuilder().responseCode(code).updatedAt(Instant.now()).build();
     }
 
-    public void raiseEvent(String eventType) {
-        domainEvents.add(eventType);
+    // ── Domain aggregate methods — validate, change state, raise typed event ──
+
+    /**
+     * Creates a new transaction in INITIATED state and raises TransactionInitiatedEvent.
+     * Use this factory in production code; the builder is for tests and adapters.
+     */
+    public static Transaction initiate(
+            UUID id,
+            MerchantId merchantId,
+            TerminalId terminalId,
+            Money amount,
+            PaymentNetwork network,
+            PaymentMethod paymentMethod,
+            PanHash panHash,
+            SystemTraceAuditNumber stan,
+            Instant createdAt) {
+        Transaction txn = builder()
+            .id(id)
+            .merchantId(merchantId)
+            .terminalId(terminalId)
+            .amount(amount)
+            .network(network)
+            .paymentMethod(paymentMethod)
+            .panHash(panHash)
+            .stan(stan)
+            .status(TransactionStatus.INITIATED)
+            .createdAt(createdAt)
+            .build();
+        txn.raiseEvent(DomainEvent.of(
+            "transaction.initiated",
+            id.toString(),
+            "TRANSACTION",
+            new TransactionInitiatedEvent(id, merchantId, amount, network, paymentMethod)
+        ));
+        return txn;
     }
 
-    public List<String> pullDomainEvents() {
-        List<String> events = new ArrayList<>(domainEvents);
+    public Transaction authorize(AuthorizationCode authCode) {
+        if (!status.canTransitionTo(TransactionStatus.AUTHORIZED)) {
+            throw new InvalidStateTransitionException(id, status, TransactionStatus.AUTHORIZED);
+        }
+        Transaction updated = withStatus(TransactionStatus.AUTHORIZED).withAuthCode(authCode);
+        updated.raiseEvent(DomainEvent.of(
+            "transaction.authorized",
+            id.toString(),
+            "TRANSACTION",
+            new TransactionAuthorizedEvent(id, amount, authCode, network)
+        ));
+        return updated;
+    }
+
+    public Transaction decline(String declineResponseCode) {
+        if (!status.canTransitionTo(TransactionStatus.DECLINED)) {
+            throw new InvalidStateTransitionException(id, status, TransactionStatus.DECLINED);
+        }
+        Transaction updated = withStatus(TransactionStatus.DECLINED).withResponseCode(declineResponseCode);
+        updated.raiseEvent(DomainEvent.of(
+            "transaction.declined",
+            id.toString(),
+            "TRANSACTION",
+            new TransactionDeclinedEvent(id, declineResponseCode)
+        ));
+        return updated;
+    }
+
+    public Transaction initiateReversal() {
+        if (!status.canTransitionTo(TransactionStatus.REVERSAL_PENDING)) {
+            throw new InvalidStateTransitionException(id, status, TransactionStatus.REVERSAL_PENDING);
+        }
+        Transaction updated = withStatus(TransactionStatus.REVERSAL_PENDING);
+        updated.raiseEvent(DomainEvent.of(
+            "transaction.reversal_initiated",
+            id.toString(),
+            "TRANSACTION",
+            new ReversalInitiatedEvent(id, amount)
+        ));
+        return updated;
+    }
+
+    public Transaction receiveChargeback() {
+        if (!status.canTransitionTo(TransactionStatus.CHARGEBACK_RECEIVED)) {
+            throw new InvalidStateTransitionException(id, status, TransactionStatus.CHARGEBACK_RECEIVED);
+        }
+        Transaction updated = withStatus(TransactionStatus.CHARGEBACK_RECEIVED);
+        updated.raiseEvent(DomainEvent.of(
+            "transaction.chargeback_received",
+            id.toString(),
+            "TRANSACTION",
+            new ChargebackReceivedEvent(id, amount)
+        ));
+        return updated;
+    }
+
+    // ── Event lifecycle ───────────────────────────────────────────────────────
+
+    public void raiseEvent(DomainEvent<?> event) {
+        domainEvents.add(event);
+    }
+
+    public List<DomainEvent<?>> pullDomainEvents() {
+        List<DomainEvent<?>> events = new ArrayList<>(domainEvents);
         domainEvents.clear();
         return Collections.unmodifiableList(events);
     }
+
+    // ── Builder ───────────────────────────────────────────────────────────────
 
     private Builder toBuilder() {
         Builder b = new Builder();
@@ -134,7 +237,7 @@ public final class Transaction {
         private String responseCode;
         private Instant createdAt;
         private Instant updatedAt;
-        private List<String> domainEvents = new ArrayList<>();
+        private List<DomainEvent<?>> domainEvents = new ArrayList<>();
 
         public Builder id(UUID id) { this.id = id; return this; }
         public Builder merchantId(MerchantId merchantId) { this.merchantId = merchantId; return this; }
