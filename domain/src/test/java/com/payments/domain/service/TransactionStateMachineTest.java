@@ -4,6 +4,7 @@ import com.payments.domain.exception.InvalidStateTransitionException;
 import com.payments.domain.fixture.TransactionFixture;
 import com.payments.domain.model.Transaction;
 import com.payments.domain.model.TransactionStatus;
+import com.payments.domain.model.event.DomainEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -85,8 +86,10 @@ class TransactionStateMachineTest {
 
         Transaction result = stateMachine.transition(txn, to);
 
-        String expectedEvent = "transaction." + to.name().toLowerCase();
-        assertThat(result.domainEvents()).containsExactly(expectedEvent);
+        String expectedEventType = "transaction." + to.name().toLowerCase();
+        assertThat(result.domainEvents())
+            .extracting(DomainEvent::eventType)
+            .containsExactly(expectedEventType);
     }
 
     @Test
