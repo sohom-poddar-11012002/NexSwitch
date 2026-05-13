@@ -46,6 +46,8 @@ softhsm2.conf
 .claude/
 .dual-graph/
 
-# Project requirements doc — contains personal info, kept local only
+# Project requirements doc — contains personal/career info, kept local only
 CLAUDE.md
-CONTEXT.md
+
+# Sprint context — committed so sessions can resume; no personal info inside
+# (CONTEXT.md is tracked — do NOT add it back here)
