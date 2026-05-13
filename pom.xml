@@ -31,12 +31,12 @@
     </modules>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- Spring Boot -->
-        <spring-boot.version>3.5.14</spring-boot.version>
+        <spring-boot.version>4.0.6</spring-boot.version>
 
         <!-- Dependencies NOT in Spring Boot BOM -->
         <jpos.version>2.1.9</jpos.version>
@@ -46,11 +46,12 @@
         <aws-sdk.version>2.25.60</aws-sdk.version>
         <logstash-encoder.version>7.4</logstash-encoder.version>
         <opentelemetry-bom.version>2.4.0</opentelemetry-bom.version>
+        <testcontainers.version>1.21.0</testcontainers.version>
         <wiremock.version>3.3.1</wiremock.version>
         <snakeyaml.version>2.2</snakeyaml.version>
 
         <!-- Plugin versions -->
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.3.0</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.3.0</maven-failsafe-plugin.version>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
@@ -63,6 +64,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Testcontainers BOM — Spring Boot 4.x removed this from its BOM -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -175,7 +185,7 @@
     <build>
         <pluginManagement>
             <plugins>
-                <!-- Java 21 target, strict release flag -->
+                <!-- Java 26 target, strict release flag -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
