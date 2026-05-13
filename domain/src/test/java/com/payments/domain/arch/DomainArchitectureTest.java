@@ -50,6 +50,7 @@ class DomainArchitectureTest {
     static final ArchRule domainServicesMustOnlyUseDomainTypes =
         classes()
             .that().resideInAPackage("com.payments.domain.service..")
+            .and().haveNameNotMatching(".*Test")
             .should().onlyDependOnClassesThat()
             .resideInAnyPackage(
                 "com.payments.domain..",
