@@ -4,7 +4,6 @@ import com.payments.domain.model.*;
 import com.payments.domain.model.vo.*;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.UUID;
 
