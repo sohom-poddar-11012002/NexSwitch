@@ -49,5 +49,5 @@ softhsm2.conf
 # Project requirements doc — contains personal/career info, kept local only
 CLAUDE.md
 
-# Sprint context — committed so sessions can resume; no personal info inside
-# (CONTEXT.md is tracked — do NOT add it back here)
+# Sprint context — Claude reads this locally; never committed
+CONTEXT.md
