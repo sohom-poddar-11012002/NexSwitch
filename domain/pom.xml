@@ -39,6 +39,12 @@
                     <execution>
                         <id>prepare-agent</id>
                         <goals><goal>prepare-agent</goal></goals>
+                        <configuration>
+                            <!-- Only instrument our own classes — prevents JaCoCo from
+                                 trying to process JDK-internal classes (class v70) which
+                                 JaCoCo 0.8.13 cannot handle under the Java 26 runtime. -->
+                            <includes>com/payments/**</includes>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>report</id>
