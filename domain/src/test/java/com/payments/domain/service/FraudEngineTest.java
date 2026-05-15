@@ -271,6 +271,73 @@ class FraudEngineTest {
             .isInstanceOf(IllegalArgumentException.class);
     }
 
+    // ── ML port — score merging ───────────────────────────────────────────────
+
+    @Test
+    void mlPort_notPresent_scoreHasEmptyMlRiskScore() {
+        FraudScore score = engine.score(context("5411", "6000.00"), clean());
+        assertThat(score.mlRiskScore()).isEmpty();
+    }
+
+    @Test
+    void mlPort_returnsScore_mergedIntoFraudScore() {
+        var ml = (com.payments.domain.port.outbound.FraudScoringPort)
+            (ctx, budget) -> java.util.Optional.of(new java.math.BigDecimal("0.30"));
+        var engineWithMl = new FraudEngine(ml);
+
+        FraudScore score = engineWithMl.score(context("5411", "6000.00"), clean());
+
+        assertThat(score.mlRiskScore()).hasValue(new java.math.BigDecimal("0.30"));
+        assertThat(score.effectiveLevel()).isEqualTo(LOW); // 0.30 doesn't elevate LOW
+    }
+
+    @Test
+    void mlPort_highScore_elevatesMediumToBlock() {
+        var ml = (com.payments.domain.port.outbound.FraudScoringPort)
+            (ctx, budget) -> java.util.Optional.of(new java.math.BigDecimal("0.90"));
+        var engineWithMl = new FraudEngine(ml);
+
+        // Round amount triggers MEDIUM rule-based; ML 0.90 elevates to BLOCK
+        FraudScore score = engineWithMl.score(context("5411", "10000.00"), clean());
+
+        assertThat(score.ruleBasedLevel()).isEqualTo(MEDIUM);
+        assertThat(score.effectiveLevel()).isEqualTo(RiskLevel.BLOCK);
+    }
+
+    @Test
+    void mlPort_notCalledWhenRuleEngineAlreadyBlocks() {
+        boolean[] called = {false};
+        var ml = (com.payments.domain.port.outbound.FraudScoringPort) (ctx, budget) -> {
+            called[0] = true;
+            return java.util.Optional.of(new java.math.BigDecimal("0.10"));
+        };
+        var engineWithMl = new FraudEngine(ml);
+
+        // PAN velocity > 3 → rule engine BLOCK → ML should be skipped
+        var velocity = new FraudVelocityData(4, 0, 0, false, false);
+        engineWithMl.score(context("5411", "1000.00"), velocity);
+
+        assertThat(called[0]).isFalse();
+    }
+
+    @Test
+    void mlPort_returnsEmpty_scoreHasEmptyMlRiskScore() {
+        var ml = (com.payments.domain.port.outbound.FraudScoringPort)
+            (ctx, budget) -> java.util.Optional.empty();
+        var engineWithMl = new FraudEngine(ml);
+
+        FraudScore score = engineWithMl.score(context("5411", "6000.00"), clean());
+
+        assertThat(score.mlRiskScore()).isEmpty();
+        assertThat(score.effectiveLevel()).isEqualTo(LOW);
+    }
+
+    @Test
+    void nullMlPort_throwsOnConstruction() {
+        assertThatThrownBy(() -> new FraudEngine(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+
     // ── Null guards ──────────────────────────────────────────────────────────
 
     @Test

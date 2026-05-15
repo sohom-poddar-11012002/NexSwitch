@@ -12,6 +12,8 @@ import static org.assertj.core.api.Assertions.*;
 class MerchantProfileTest {
 
     private static final Currency INR = Currency.getInstance("INR");
+    private static final BigDecimal MDR     = new BigDecimal("0.0150");
+    private static final BigDecimal RESERVE = new BigDecimal("0.0500");
 
     private MerchantProfile sample() {
         return new MerchantProfile(
@@ -21,7 +23,8 @@ class MerchantProfileTest {
             MerchantProfile.Status.ACTIVE,
             Money.of("500000.00", INR),
             Money.of("5000000.00", INR),
-            new BigDecimal("0.0150"),
+            MDR,
+            RESERVE,
             "http://merchant.example.com/webhooks",
             "secret-key"
         );
@@ -34,6 +37,8 @@ class MerchantProfileTest {
         assertThat(profile.name()).isEqualTo("Test Merchant");
         assertThat(profile.mcc()).isEqualTo("5411");
         assertThat(profile.status()).isEqualTo(MerchantProfile.Status.ACTIVE);
+        assertThat(profile.mdrPercentage()).isEqualByComparingTo(MDR);
+        assertThat(profile.reservePercentage()).isEqualByComparingTo(RESERVE);
     }
 
     @Test
@@ -43,11 +48,11 @@ class MerchantProfileTest {
 
     @Test
     void isActiveReturnsFalseForSuspendedStatus() {
-        MerchantProfile suspended = new MerchantProfile(
+        var suspended = new MerchantProfile(
             MerchantId.of("MERCH0000999"), "Test", "5411",
             MerchantProfile.Status.SUSPENDED,
             Money.of("500000.00", INR), Money.of("5000000.00", INR),
-            new BigDecimal("0.0150"), null, null
+            MDR, RESERVE, null, null
         );
         assertThat(suspended.isActive()).isFalse();
     }
@@ -57,7 +62,7 @@ class MerchantProfileTest {
         assertThatThrownBy(() -> new MerchantProfile(
             null, "Test", "5411", MerchantProfile.Status.ACTIVE,
             Money.of("500000.00", INR), Money.of("5000000.00", INR),
-            new BigDecimal("0.0150"), null, null
+            MDR, RESERVE, null, null
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -66,7 +71,16 @@ class MerchantProfileTest {
         assertThatThrownBy(() -> new MerchantProfile(
             MerchantId.of("MERCH0000999"), "  ", "5411", MerchantProfile.Status.ACTIVE,
             Money.of("500000.00", INR), Money.of("5000000.00", INR),
-            new BigDecimal("0.0150"), null, null
+            MDR, RESERVE, null, null
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void throwsWhenReservePercentageIsNull() {
+        assertThatThrownBy(() -> new MerchantProfile(
+            MerchantId.of("MERCH0000999"), "Test", "5411", MerchantProfile.Status.ACTIVE,
+            Money.of("500000.00", INR), Money.of("5000000.00", INR),
+            MDR, null, null, null
         )).isInstanceOf(IllegalArgumentException.class);
     }
 

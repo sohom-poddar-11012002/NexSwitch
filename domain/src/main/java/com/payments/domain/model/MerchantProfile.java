@@ -13,6 +13,7 @@ public record MerchantProfile(
     Money perTransactionLimit,
     Money dailyLimit,
     BigDecimal mdrPercentage,
+    BigDecimal reservePercentage,
     String webhookUrl,
     String webhookSecret
 ) {
@@ -24,6 +25,7 @@ public record MerchantProfile(
         if (perTransactionLimit == null) throw new IllegalArgumentException("perTransactionLimit must not be null");
         if (dailyLimit == null) throw new IllegalArgumentException("dailyLimit must not be null");
         if (mdrPercentage == null) throw new IllegalArgumentException("mdrPercentage must not be null");
+        if (reservePercentage == null) throw new IllegalArgumentException("reservePercentage must not be null");
     }
 
     public boolean isActive() {

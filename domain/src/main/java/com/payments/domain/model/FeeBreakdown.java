@@ -2,6 +2,8 @@ package com.payments.domain.model;
 
 import com.payments.domain.model.vo.Money;
 
+import java.util.Optional;
+
 public record FeeBreakdown(
     Money grossAmount,
     Money interchangeFee,
@@ -9,5 +11,23 @@ public record FeeBreakdown(
     Money mdrFee,
     Money netToMerchant,
     Money reserveWithholding,
-    Money payoutAmount
-) {}
+    Money payoutAmount,
+    Optional<Money> dccFxMargin
+) {
+    public FeeBreakdown(Money grossAmount, Money interchangeFee, Money networkAssessmentFee,
+                        Money mdrFee, Money netToMerchant, Money reserveWithholding,
+                        Money payoutAmount) {
+        this(grossAmount, interchangeFee, networkAssessmentFee, mdrFee,
+             netToMerchant, reserveWithholding, payoutAmount, Optional.empty());
+    }
+
+    public FeeBreakdown withDccMargin(Money margin) {
+        return new FeeBreakdown(grossAmount, interchangeFee, networkAssessmentFee,
+                                mdrFee, netToMerchant, reserveWithholding,
+                                payoutAmount, Optional.of(margin));
+    }
+
+    public boolean hasDcc() {
+        return dccFxMargin.isPresent();
+    }
+}

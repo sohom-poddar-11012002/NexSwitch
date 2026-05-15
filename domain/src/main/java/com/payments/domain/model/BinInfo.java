@@ -6,7 +6,9 @@ public record BinInfo(
     String issuerName,
     String cardType,
     String cardProduct,
-    String countryCode
+    String countryCode,
+    String issuerBank,    // e.g. "CANARA", "SBI", "HDFC" — for on-us routing detection
+    boolean nfsEligible   // true for RuPay + co-badged domestic debit → route via NPCI NFS
 ) {
     public BinInfo {
         if (binPrefix == null || binPrefix.isBlank())
