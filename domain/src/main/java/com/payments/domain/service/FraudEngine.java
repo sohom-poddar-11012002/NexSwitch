@@ -1,11 +1,14 @@
 package com.payments.domain.service;
 
 import com.payments.domain.model.*;
+import com.payments.domain.port.outbound.FraudScoringPort;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 public class FraudEngine {
@@ -21,6 +24,17 @@ public class FraudEngine {
     private static final Set<String> HIGH_RISK_MCCS = Set.of("5094", "5944", "7995");
     private static final BigDecimal FIFTY_THOUSAND  = new BigDecimal("50000.00");
     private static final BigDecimal TEN_THOUSAND    = new BigDecimal("10000.00");
+    private static final Duration   ML_BUDGET       = Duration.ofMillis(10);
+
+    private final Optional<FraudScoringPort> mlPort;
+
+    public FraudEngine() {
+        this.mlPort = Optional.empty();
+    }
+
+    public FraudEngine(FraudScoringPort mlPort) {
+        this.mlPort = Optional.of(Objects.requireNonNull(mlPort, "mlPort must not be null"));
+    }
 
     public FraudScore score(FraudScoringContext context, FraudVelocityData velocity) {
         Objects.requireNonNull(context,  "context must not be null");
@@ -64,7 +78,16 @@ public class FraudEngine {
             maxLevel = max(maxLevel, RiskLevel.MEDIUM);
         }
 
-        return FraudScore.ruleBasedOnly(maxLevel, triggered);
+        FraudScore ruleScore = FraudScore.ruleBasedOnly(maxLevel, triggered);
+
+        // ML score is a supplementary signal — rule-based gate always decides on BLOCK.
+        // Skip ML call entirely if rule engine already blocked, saving the 10ms budget.
+        if (maxLevel == RiskLevel.BLOCK || mlPort.isEmpty()) {
+            return ruleScore;
+        }
+
+        Optional<BigDecimal> mlScore = mlPort.get().score(context, ML_BUDGET);
+        return mlScore.map(ruleScore::withMlScore).orElse(ruleScore);
     }
 
     private static boolean isRoundAmount(BigDecimal amount) {

@@ -211,6 +211,59 @@ class FeeWaterfallCalculatorTest {
         assertThat(b.interchangeFee().amount()).isEqualByComparingTo(expected);
     }
 
+    // ── DCC overload — FX margin added on top of normal waterfall ────────────
+
+    @Test
+    void dccCalculation_addsFxMarginAboveNormalFees() {
+        // Visa DEBIT ₹6,000, MDR 1.5%, reserve 5%, DCC margin 2%
+        var dccMarginRate = new BigDecimal("0.0200");
+        var b = calculator.calculateWithDcc(
+            Money.of("6000.00", INR), VISA, "DEBIT", DEFAULT_MDR, DEFAULT_RESERVE, dccMarginRate);
+
+        assertThat(b.hasDcc()).isTrue();
+        assertThat(b.dccFxMargin()).isPresent();
+        // DCC margin = 2% of ₹6,000 = ₹120
+        assertThat(b.dccFxMargin().get().amount()).isEqualByComparingTo(new BigDecimal("120.00"));
+    }
+
+    @Test
+    void dccCalculation_baseFeesUnchangedVsNormalPath() {
+        var dccMarginRate = new BigDecimal("0.0200");
+        var normal = calculator.calculate(
+            Money.of("6000.00", INR), VISA, "DEBIT", DEFAULT_MDR, DEFAULT_RESERVE);
+        var dcc = calculator.calculateWithDcc(
+            Money.of("6000.00", INR), VISA, "DEBIT", DEFAULT_MDR, DEFAULT_RESERVE, dccMarginRate);
+
+        assertThat(dcc.interchangeFee()).isEqualTo(normal.interchangeFee());
+        assertThat(dcc.mdrFee()).isEqualTo(normal.mdrFee());
+        assertThat(dcc.payoutAmount()).isEqualTo(normal.payoutAmount());
+    }
+
+    @Test
+    void noDcc_hasDccFalse() {
+        var b = calculator.calculate(
+            Money.of("6000.00", INR), VISA, "DEBIT", DEFAULT_MDR, DEFAULT_RESERVE);
+        assertThat(b.hasDcc()).isFalse();
+        assertThat(b.dccFxMargin()).isEmpty();
+    }
+
+    @Test
+    void dccMarginRate_negativeFails() {
+        assertThatThrownBy(() ->
+            calculator.calculateWithDcc(
+                Money.of("6000.00", INR), VISA, "DEBIT", DEFAULT_MDR, DEFAULT_RESERVE,
+                new BigDecimal("-0.01")))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void dccMarginRate_null_throws() {
+        assertThatThrownBy(() ->
+            calculator.calculateWithDcc(
+                Money.of("6000.00", INR), VISA, "DEBIT", DEFAULT_MDR, DEFAULT_RESERVE, null))
+            .isInstanceOf(NullPointerException.class);
+    }
+
     // ── Null guards ───────────────────────────────────────────────────────────
 
     @Test

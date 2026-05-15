@@ -62,6 +62,23 @@ public class FeeWaterfallCalculator {
         );
     }
 
+    // DCC overload: same waterfall + dccFxMarginRate applied on top as additional Payswiff revenue.
+    // Settlement always in INR — Payswiff absorbs zero FX risk. Margin is 2–4% above mid-market.
+    public FeeBreakdown calculateWithDcc(Money grossAmount,
+                                         PaymentNetwork network,
+                                         String cardType,
+                                         BigDecimal mdrPercentage,
+                                         BigDecimal reservePercentage,
+                                         BigDecimal dccFxMarginRate) {
+        Objects.requireNonNull(dccFxMarginRate, "dccFxMarginRate must not be null");
+        if (dccFxMarginRate.compareTo(BigDecimal.ZERO) < 0)
+            throw new IllegalArgumentException("dccFxMarginRate must be non-negative");
+
+        FeeBreakdown base = calculate(grossAmount, network, cardType, mdrPercentage, reservePercentage);
+        var dccMargin = pct(grossAmount.amount(), dccFxMarginRate);
+        return base.withDccMargin(Money.of(dccMargin, grossAmount.currency()));
+    }
+
     private static BigDecimal pct(BigDecimal amount, BigDecimal rate) {
         return amount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
     }
