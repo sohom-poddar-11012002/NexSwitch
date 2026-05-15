@@ -26,6 +26,11 @@ public interface JpaTransactionRepository
             @Param("merchantId") String merchantId,
             @Param("statuses") List<String> statuses);
 
+    List<TransactionEntity> findByStatus(String status);
+
     @Query("SELECT t FROM TransactionEntity t WHERE t.status IN ('CAPTURED', 'SETTLEMENT_PENDING') AND t.createdAt >= :since")
     List<TransactionEntity> findSettlementEligible(@Param("since") Instant since);
+
+    @Query("SELECT t FROM TransactionEntity t WHERE t.status = 'CAPTURED' AND t.createdAt >= :since")
+    List<TransactionEntity> findCapturedSince(@Param("since") Instant since);
 }
