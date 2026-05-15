@@ -51,3 +51,6 @@ CLAUDE.md
 
 # Sprint context — Claude reads this locally; never committed
 CONTEXT.md
+
+# Spec files — extracted from CLAUDE.md, local only, dual-graph indexed
+docs/specs/
