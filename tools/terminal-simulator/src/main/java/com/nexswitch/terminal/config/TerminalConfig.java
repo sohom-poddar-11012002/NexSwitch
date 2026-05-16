@@ -5,6 +5,12 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.InputStream;
 import java.util.Map;
 
+// LEARN: Java records are immutable value types — the compiler auto-generates a canonical
+//        constructor, accessors, equals, hashCode, and toString. Ideal for config objects
+//        that must never be mutated after loading (immutability eliminates a whole class of bugs).
+// LEARN: SnakeYAML deserialises YAML into untyped Maps/Lists — you cast manually because YAML
+//        has no schema. For production configs prefer @ConfigurationProperties (Spring-bound,
+//        validated at startup) over manual YAML parsing.
 public record TerminalConfig(
     String terminalId,
     String merchantId,
