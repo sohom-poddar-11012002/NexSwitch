@@ -1,5 +1,6 @@
 package com.nexswitch.adapters.inbound.iso8583;
 
+import com.nexswitch.domain.port.inbound.ProcessPaymentUseCase;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -19,10 +20,10 @@ public class Iso8583ChannelInitializer extends ChannelInitializer<SocketChannel>
     private final Iso8583Encoder encoder;
     private final Iso8583RequestHandler handler;
 
-    public Iso8583ChannelInitializer(Iso8583PackagerFactory packagerFactory) {
+    public Iso8583ChannelInitializer(Iso8583PackagerFactory packagerFactory, ProcessPaymentUseCase processPaymentUseCase) {
         this.decoder = new Iso8583Decoder(packagerFactory.getPackager());
         this.encoder = new Iso8583Encoder();
-        this.handler = new Iso8583RequestHandler(packagerFactory.getPackager());
+        this.handler = new Iso8583RequestHandler(packagerFactory.getPackager(), processPaymentUseCase);
     }
 
     @Override
