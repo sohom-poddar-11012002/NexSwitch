@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.UUID;
 
+// LEARN: RichDomainModel — chargeback has its own lifecycle (responseDeadline, status) independent of Transaction
 public record ChargebackRecord(
     UUID id,
     UUID transactionId,

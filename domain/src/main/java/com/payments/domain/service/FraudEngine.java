@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+// LEARN: RuleEngine — O(1) velocity rule checks on hot auth path; ML scoring is async optional
 public class FraudEngine {
 
     public static final String RULE_PAN_VELOCITY_5MIN     = "PAN_VELOCITY_5MIN";

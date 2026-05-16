@@ -23,6 +23,7 @@ import org.testcontainers.utility.DockerImageName;
  *   @SpringBootTest
  *   class MyRepositoryIT extends IntegrationTestBase { ... }
  */
+// LEARN: TestcontainersSingleton — static containers shared across all test classes; withReuse(true) survives JVM restarts
 @Testcontainers
 public abstract class IntegrationTestBase {
 

@@ -5,6 +5,7 @@ import com.payments.domain.model.vo.Money;
 import java.time.LocalDate;
 import java.util.UUID;
 
+// LEARN: AggregateRoot — nested Status enum keeps batch lifecycle self-contained
 public record SettlementBatch(
     UUID id,
     PaymentNetwork network,

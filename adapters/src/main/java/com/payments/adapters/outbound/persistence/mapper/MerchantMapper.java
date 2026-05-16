@@ -8,6 +8,7 @@ import org.mapstruct.Mapper;
 
 import java.util.Currency;
 
+// LEARN: MapStruct — MapStruct generates implementation at compile time; zero reflection at runtime
 // MerchantProfile limits are Money VOs — both directions are hand-written default methods
 // so MapStruct generates a Spring @Component impl without needing nested path resolution.
 @Mapper(componentModel = "spring")

@@ -16,6 +16,7 @@ import java.util.UUID;
  *
  * Demo PAN 4539148803436467 (Luhn-valid Visa) from the demo script.
  */
+// LEARN: TestFixture — hardcoded MERCHANT_ID/TERMINAL_ID match V11 seed; no INSERT needed in integration tests
 public final class TransactionFixture {
 
     public static final Currency INR          = Currency.getInstance("INR");

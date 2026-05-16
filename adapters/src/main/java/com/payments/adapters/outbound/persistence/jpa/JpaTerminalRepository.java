@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
+// LEARN: SpringDataJpa — @Query for JOIN-heavy queries; derived method names for simple lookups
 public interface JpaTerminalRepository extends JpaRepository<TerminalEntity, String> {
 
     List<TerminalEntity> findByMerchantId(String merchantId);

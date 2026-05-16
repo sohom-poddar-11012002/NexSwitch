@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+// LEARN: AdapterPattern — implements domain port; domain calls save(Transaction), never touches @Entity
 @Repository
 public class PostgresTransactionRepository implements TransactionRepository {
 

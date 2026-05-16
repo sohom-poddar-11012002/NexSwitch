@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+// LEARN: AggregateState — reconciliation run tracks its own lifecycle independent of individual transactions
 public final class ReconciliationRun {
 
     private final UUID id;

@@ -4,6 +4,7 @@ import com.payments.domain.model.vo.AuthorizationCode;
 
 import java.time.Instant;
 
+// LEARN: SealedInterface — compiler enforces exhaustive switch; no default case = no missed outcome
 public sealed interface AuthorizationResult
         permits AuthorizationResult.Approved,
                 AuthorizationResult.Declined,

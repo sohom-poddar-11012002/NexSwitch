@@ -12,6 +12,7 @@ import java.util.Map;
  *
  * Field values match the demo card: PAN 4539148803436467, Amount ₹6,000.
  */
+// LEARN: ISO8583 — Map<Integer,String> models variable bitmap; field presence = key in map, absence = key missing
 public final class Iso8583MessageFixture {
 
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("MMddHHmmss");

@@ -3,6 +3,7 @@ package com.payments.domain.model.event;
 import java.time.Instant;
 import java.util.UUID;
 
+// LEARN: DomainEvent — generic envelope with schemaVersion for Avro evolution compatibility
 public record DomainEvent<T>(
     String eventId,
     String eventType,

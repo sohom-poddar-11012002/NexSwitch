@@ -1,5 +1,6 @@
 package com.payments.domain.model.vo;
 
+// LEARN: WrapperType — distinct type prevents passing TerminalId where MerchantId expected (type safety)
 public record MerchantId(String value) {
 
     private static final int MAX_LENGTH = 15;

@@ -1,5 +1,6 @@
 package com.payments.domain.model.vo;
 
+// LEARN: GlobalReference — 23-digit ARN is how networks identify transactions for chargebacks and recon
 public record AcquirerReferenceNumber(String value) {
 
     private static final int REQUIRED_LENGTH = 23;

@@ -2,6 +2,7 @@ package com.payments.domain.model;
 
 import java.time.Instant;
 
+// LEARN: SealedInterface — Generated/Failed exhaustive; caller cannot ignore failure path
 public sealed interface QRGenerationResult
         permits QRGenerationResult.Generated,
                 QRGenerationResult.Failed {

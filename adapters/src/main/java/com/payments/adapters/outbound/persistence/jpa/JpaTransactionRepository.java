@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+// LEARN: JpaSpecificationExecutor — type-safe dynamic query composition; avoids string-concatenated JPQL
 public interface JpaTransactionRepository
         extends JpaRepository<TransactionEntity, UUID>,
                 JpaSpecificationExecutor<TransactionEntity> {

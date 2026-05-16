@@ -1,5 +1,6 @@
 package com.payments.domain.model.vo;
 
+// LEARN: WrapperType — 8-char constraint matches ISO 8583 field 41 terminal ID format
 public record TerminalId(String value) {
 
     private static final int REQUIRED_LENGTH = 8;

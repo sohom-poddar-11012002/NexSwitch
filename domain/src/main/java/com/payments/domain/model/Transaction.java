@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+// LEARN: AggregateRoot — static factory (initiate), guard+throw, raises DomainEvents; no setters
 public final class Transaction {
 
     private final UUID id;

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+// LEARN: OptionalField — mlRiskScore is Optional<BigDecimal> because ML port is not wired pre-June
 public record FraudScore(
         RiskLevel ruleBasedLevel,
         Optional<BigDecimal> mlRiskScore,
