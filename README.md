@@ -1,117 +1,99 @@
 # Payments Platform
 
-A production-grade distributed payments platform built in Java 26 / Spring Boot 4.0.x that replicates the core internal architecture of an Indian payment switch and acquirer processor — modelled on how companies like Juspay, Pine Labs, and Payswiff operate internally.
+[![CI](https://github.com/sohom-poddar-11012002/PaymentsPlatform/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/sohom-poddar-11012002/PaymentsPlatform/actions/workflows/ci-cd.yml)
+[![Coverage](https://img.shields.io/badge/domain%20coverage-%E2%89%A590%25-brightgreen)](#testing)
+[![Java](https://img.shields.io/badge/Java-26-orange)](https://adoptium.net/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-green)](https://spring.io/projects/spring-boot)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**This is not a Razorpay/Stripe integration wrapper.** It is the layer those companies build internally — ISO 8583 over persistent TCP, SoftHSM2 cryptography, real state machines, real reconciliation, real fraud rules.
+A production-grade Indian payment switch and acquirer processor built on hexagonal architecture. Implements the protocols and patterns used by payment infrastructure companies — ISO 8583 over persistent TCP, PKCS#11 cryptography, real-time fraud scoring, Spring Batch settlement, and three-way reconciliation.
 
 ---
 
 ## Table of Contents
 
-- [What This Is](#what-this-is)
+- [Overview](#overview)
 - [Architecture](#architecture)
-- [Implementation Status](#implementation-status)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
-- [Local Setup](#local-setup)
-- [Running the Project](#running-the-project)
+- [Getting Started](#getting-started)
+- [Running the Stack](#running-the-stack)
 - [Testing](#testing)
-- [CI/CD Pipeline](#cicd-pipeline)
-- [Configuration Reference](#configuration-reference)
 - [Services and Ports](#services-and-ports)
-- [Roadmap](#roadmap)
+- [Configuration](#configuration)
+- [CI/CD](#cicd)
 - [Project Structure](#project-structure)
+- [Roadmap](#roadmap)
 
 ---
 
-## What This Is
+## Overview
 
-A payment switch and acquirer processor that handles:
+The platform processes card-present and UPI transactions end-to-end, from terminal connection through network routing, cryptographic verification, fraud evaluation, and settlement.
 
-- **Card present transactions** — ISO 8583 MTI 0100/0200/0400/0800 over persistent TCP
-- **Contactless NFC** — EMV contactless, CDCVM, tap-to-pay flows
-- **Dynamic and static UPI QR** — ZXing QR generation, Redis TTL sessions, SSE push
-- **Timeout + reversal with race condition handling** — 15s timeout, MTI 0400, late 0110 discard
-- **Cryptography** — ARQC verification, PIN block translation, ARPC generation via SoftHSM2 (PKCS#11)
-- **Fraud scoring** — 7 rule-based rules across BLOCK/HIGH/MEDIUM levels; ML scoring port ready for post-June
-- **Webhook dispatch** — HMAC-SHA256 signed, exponential backoff retry, dead letter queue
-- **Spring Batch settlement** — 5-step job, daily at 23:30 IST, S3 CSV per network
-- **Three-way reconciliation** — switch log vs network file vs bank statement, 6 mismatch categories
-- **Chargeback lifecycle** — evidence packaging, reserve account management
-- **Three Next.js 15 frontends** — simulator, merchant dashboard, ops dashboard
+**Core capabilities:**
 
-Target architecture narrative for interviews:
-
-> "I built a payment switch from scratch — ISO 8583 over persistent TCP, SoftHSM2 for ARQC verification and PIN block translation, dynamic QR with Redis TTL sessions, timeout and reversal handling with race condition detection, webhook dispatch with HMAC-SHA256 signing, Spring Batch settlement with three-way reconciliation, three Next.js 15 App Router frontends — deployed on AWS ECS Fargate behind CloudFront."
+| Capability | Implementation |
+|---|---|
+| Card-present transactions | ISO 8583 MTI 0100/0200/0400/0800 over persistent TCP (jPOS) |
+| Contactless NFC | EMV contactless, CDCVM, CVM limit enforcement |
+| Dynamic and static UPI QR | ZXing generation, Redis TTL sessions, SSE push to frontend |
+| Timeout and reversal | 15s network timeout, MTI 0400, late-response race condition detection |
+| HSM cryptography | ARQC verification, DUKPT PIN block translation, ARPC generation (SoftHSM2 / PKCS#11) |
+| Fraud scoring | 7 rule-based rules (velocity, impossible travel, high-risk MCC) across BLOCK / HIGH / MEDIUM levels; ML scoring port defined |
+| Webhook delivery | HMAC-SHA256 signed, exponential backoff retry, Kafka dead-letter queue |
+| Settlement | Spring Batch 5-step chunk job, daily at 23:30 IST, CSV per network to S3 |
+| Reconciliation | Three-way match — switch log vs network file vs bank statement, 6 mismatch categories |
+| Chargeback lifecycle | Evidence packaging, reserve account management |
+| Frontends | Three Next.js 15 App Router applications — terminal simulator, merchant dashboard, ops dashboard |
 
 ---
 
 ## Architecture
 
-Hexagonal architecture (Ports & Adapters), enforced at build time by ArchUnit. CI fails on any architecture violation.
+Hexagonal architecture (Ports and Adapters), enforced at build time by ArchUnit. CI fails on any architecture violation.
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Domain Core                      │
-│  Pure Java 26. Zero external dependencies.          │
-│  No Spring. No Kafka. No JPA. No HTTP.              │
-│  Models · Ports (interfaces) · Services             │
-│                                                     │
-│  TransactionStateMachine  FraudEngine               │
-│  RoutingEngine            FeeWaterfallCalculator     │
-│  LuhnValidator            QRSessionManager          │
-└──────────────────────┬──────────────────────────────┘
-                       │ depends on ↑ only
-┌──────────────────────▼──────────────────────────────┐
-│                 Application Layer                   │
-│  Spring Boot wiring only. No business logic.        │
-│  @Bean · @Configuration · use-case orchestration    │
-└──────────────────────┬──────────────────────────────┘
-                       │ depends on ↑ only
-┌──────────────────────▼──────────────────────────────┐
-│                  Adapters Layer                     │
-│  All infrastructure. Implements domain ports.       │
-│  jPOS · SoftHSM2 · Kafka · PostgreSQL · Redis · S3 │
-│  Domain never imports from here.                    │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                        Domain Core                          │
+│  Pure Java. Zero external dependencies.                     │
+│  No Spring · No Kafka · No JPA · No HTTP.                   │
+│                                                             │
+│  TransactionStateMachine   FraudEngine    RoutingEngine     │
+│  FeeWaterfallCalculator    LuhnValidator  QRSessionManager  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │  imports domain only
+┌──────────────────────────▼──────────────────────────────────┐
+│                    Application Layer                        │
+│  Spring Boot wiring only. No business logic.               │
+│  @Bean · @Configuration · use-case orchestration           │
+└──────────────────────────┬──────────────────────────────────┘
+                           │  imports domain + application
+┌──────────────────────────▼──────────────────────────────────┐
+│                    Adapters Layer                           │
+│  All infrastructure. Implements domain ports.              │
+│  jPOS · SoftHSM2 · Kafka · PostgreSQL · Redis · S3        │
+│  Domain never imports from here.                           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Enforcement rules (ArchUnit, checked in CI):**
-- Domain has zero external dependencies
-- No `@Autowired` field injection anywhere — constructor injection only
-- Controllers only depend on use-case interfaces
-- Domain services only use domain types
+**Enforcement rules checked in CI (ArchUnit):**
+- Domain module has zero external dependencies
+- No `@Autowired` field injection — constructor injection only
+- Controllers depend only on use-case interfaces
+- Domain services depend only on domain types
 
----
-
-## Implementation Status
-
-### v1.0.0 Sprint (May–June 2026)
-
-| # | Ticket | Status | PR |
-|---|--------|--------|----|
-| #5 | Domain value objects (Money, PanHash, MerchantId, …) | ✅ Done | #19 |
-| #6 | Domain models (Transaction, TransactionStatus, enums) | ✅ Done | #21 |
-| #7 | All ports — inbound use cases, outbound ports, sealed results | ✅ Done | #22 |
-| #8 | TransactionStateMachine — 20 states, all valid transitions | ✅ Done | #23 |
-| #9 | FraudEngine — 7 rules, BLOCK/HIGH/MEDIUM, ML score port ready | ✅ Done | #24 |
-| #10 | LuhnValidator, RoutingEngine, FeeWaterfallCalculator | 🔲 Next | — |
-| #11 | Domain events | 🔲 Planned | — |
-| #12 | acquiring-service — ISO 8583 TCP + validation chain | 🔲 Planned | — |
-| #13 | payment-switch — BIN lookup, HSM, timeout/reversal | 🔲 Planned | — |
-| #14 | Dynamic QR + Redis TTL session | 🔲 Planned | — |
-| #15 | Webhook dispatcher — HMAC, retry, DLQ | 🔲 Planned | — |
-| #16 | Settlement + reconciliation | 🔲 Planned | — |
-| #17 | Chargeback service | 🔲 Planned | — |
-| #18 | Next.js 15 frontends (simulator, dashboard, ops) | 🔲 Planned | — |
-
-**Test counts:** 355 domain unit tests passing · JaCoCo ≥ 90% enforced on domain module
+**Key domain patterns:**
+- `Transaction` — aggregate root; static factory, guard-then-throw, in-memory domain events
+- `TransactionStatus` — 20-state machine; `VALID_TRANSITIONS` map gives O(1) validation
+- `AuthorizationResult`, `NetworkRoute`, `ReversalResult` — sealed interfaces; compiler enforces exhaustive handling
+- `Money` — `BigDecimal` + `Currency` value object; `HALF_UP` scale-2 enforced at construction; never `double`
 
 ---
 
 ## Tech Stack
 
-### Current (v1.0.0 sprint)
+### Core
 
 | Layer | Technology |
 |---|---|
@@ -119,45 +101,39 @@ Hexagonal architecture (Ports & Adapters), enforced at build time by ArchUnit. C
 | Framework | Spring Boot 4.0.6 |
 | ISO 8583 | jPOS 2.1.9 |
 | Cryptography | SoftHSM2 (PKCS#11) via SunPKCS11 |
-| Database | PostgreSQL 16 — NUMERIC(15,2), never float/double |
-| Cache | Redis 7 — idempotency, BIN cache, QR sessions |
-| Messaging | Apache Kafka — transactional outbox, manual offset commit |
-| Batch | Spring Batch 5 — settlement (5-step chunk) |
-| Migrations | Flyway — sequential V1–V11, immutable |
+| Database | PostgreSQL 16 — `NUMERIC(15,2)`, Flyway migrations |
+| Cache | Redis 7 — idempotency keys, BIN lookup cache, QR sessions |
+| Messaging | Apache Kafka — transactional outbox pattern, manual offset commit |
+| Batch | Spring Batch 5 — 5-step chunk-oriented settlement job |
 | ORM | Spring Data JPA + Hibernate (CRUD) · jOOQ (complex queries) |
-| Mapper | MapStruct — compile-time, zero reflection |
+| Mapper | MapStruct — compile-time code generation, zero reflection |
 | QR codes | ZXing 3.5.3 |
-| Architecture tests | ArchUnit 1.3.0 |
-| Coverage gate | JaCoCo 0.8.12 — 90% line coverage on domain |
 | Build | Maven 3.9 multi-module (14 modules) |
 | Frontend | Next.js 15 App Router · TypeScript strict · Tailwind v4 · shadcn/ui |
 | E2E tests | Playwright |
+| Architecture tests | ArchUnit 1.3.0 |
+| Coverage gate | JaCoCo 0.8.13 — ≥90% line coverage enforced on domain module |
 | Containers | Docker + Docker Compose |
-| CI/CD | GitHub Actions (test → integration → build → deploy) |
+| CI/CD | GitHub Actions |
 | Cloud | AWS ECS Fargate · RDS · ElastiCache · S3 · CloudFront |
-| Local infra | LocalStack (S3) · MailHog (email) · Jaeger (traces) |
+| Local infra | LocalStack (S3) · MailHog (SMTP) · Jaeger (traces) |
 
-### Post-June additions (v2.0.0 roadmap)
+### v2.0 Roadmap Additions
 
 | Category | Technologies |
 |---|---|
-| API patterns | gRPC · GraphQL + subscriptions · OpenAPI |
+| API patterns | gRPC · GraphQL + subscriptions · OpenAPI 3.1 |
 | Resilience | Resilience4j (circuit breaker, bulkhead, rate limiter) |
-| Orchestration | Temporal (durable workflows — replaces hand-rolled saga) |
-| CDC | Debezium + Schema Registry + Avro (replaces outbox scheduler) |
-| Search | Elasticsearch 8 + Kibana |
-| API gateway | Kong |
-| Connection pooling | PgBouncer |
+| Workflow orchestration | Temporal — durable workflows replacing hand-rolled sagas |
+| CDC | Debezium + Schema Registry + Avro |
+| Search | Elasticsearch 8 |
 | IaC | Terraform (full AWS stack) |
-| Kubernetes | kind cluster · Helm charts · NetworkPolicy · HPA · PDB |
-| GitOps | ArgoCD · Argo Rollouts (canary + blue-green) |
-| Autoscaling | KEDA (Kafka lag, Redis queue depth, scale to zero) |
+| Kubernetes | Helm · ArgoCD GitOps · Argo Rollouts · KEDA · HPA |
 | Observability | Grafana LGTM stack (Loki + Tempo + Mimir + OTel Collector) |
-| AI/ML | LangGraph · pgvector (HNSW) · RAG · Langfuse · Claude Haiku |
-| Feature flags | OpenFeature SDK + Unleash |
-| Security pipeline | Trivy · SonarQube · OWASP Dep Check · Semgrep · detect-secrets |
-| Chaos | LitmusChaos · k6 load tests (500 TPS target) |
-| Mobile | React Native + Expo · ProximityReader NFC (iOS) · watchOS companion |
+| AI / ML fraud | LangGraph · pgvector HNSW · RAG pipeline · Claude Haiku · Langfuse |
+| Security CI | Trivy · SonarQube · OWASP Dependency Check · Semgrep |
+| Chaos and load | LitmusChaos · k6 (500 TPS target, p95 < 500ms) |
+| Mobile | React Native + Expo · ProximityReader NFC · watchOS companion |
 | ISO 20022 | pacs.008 / camt.053 — large-value settlement path |
 
 ---
@@ -166,195 +142,184 @@ Hexagonal architecture (Ports & Adapters), enforced at build time by ArchUnit. C
 
 | Tool | Version | Notes |
 |---|---|---|
-| Java (Temurin) | 26.0.1+ | Required — Homebrew OpenJDK 25 will NOT work |
-| Maven | 3.9+ | Must run under Java 26 — see note below |
-| Docker | 25+ | For local infrastructure stack |
+| Java (Temurin) | 26.0.1+ | Homebrew OpenJDK 25 will not work — use Temurin 26 |
+| Maven | 3.9+ | Must run under Java 26 |
+| Docker | 25+ | Required for local infrastructure |
 | Docker Compose | v2 | Bundled with Docker Desktop |
 
-> **Important — JAVA_HOME**: Maven defaults to whatever JDK it was installed with. If `mvn --version` shows Java 25 (Homebrew), Maven will fail with `release version 26 not supported`. Fix permanently:
->
-> ```bash
-> echo 'export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-26.jdk/Contents/Home' >> ~/.zshrc
-> source ~/.zshrc
-> ```
->
-> Or prefix individual Maven commands:
-> ```bash
-> JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-26.jdk/Contents/Home mvn install
-> ```
+**Java configuration:** If `mvn --version` shows Java 25 rather than Java 26, set `JAVA_HOME` explicitly:
+
+```bash
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-26.jdk/Contents/Home
+```
 
 ---
 
-## Local Setup
+## Getting Started
 
 ```bash
-# 1. Clone
+# 1. Clone the repository
 git clone https://github.com/sohom-poddar-11012002/PaymentsPlatform.git
 cd PaymentsPlatform
 
-# 2. Verify Java 26 is active
+# 2. Verify Java 26
 java -version        # must show 26.x
 mvn --version        # Java version line must show 26.x
 
-# 3. Install all modules (runs domain tests + JaCoCo gate)
+# 3. Build all modules (runs domain tests + JaCoCo gate)
 mvn install --batch-mode
 
 # 4. Copy environment template
 cp .env.example .env
-# Edit .env if you want non-default passwords
 
 # 5. Start local infrastructure
 docker compose up postgres redis kafka zookeeper mailhog localstack jaeger mock-upstream
 ```
 
-SoftHSM2 (optional — for real ARQC operations):
+**SoftHSM2 (optional — required for real ARQC / PIN block operations):**
+
 ```bash
 # macOS
 brew install softhsm
 softhsm2-util --init-token --slot 0 --label "payments-hsm" --pin 1234 --so-pin 5678
 
-# Set in .env:
-# HSM_PROVIDER=softhsm
-# HSM_PKCS11_LIB=/opt/homebrew/lib/softhsm/libsofthsm2.so
+# .env
+HSM_PROVIDER=softhsm
+HSM_PKCS11_LIB=/opt/homebrew/lib/softhsm/libsofthsm2.so
 ```
 
-Without SoftHSM2, the MockHsmAdapter is used automatically (`HSM_PROVIDER=mock` default).
+Without SoftHSM2, `MockHsmAdapter` is used automatically (`HSM_PROVIDER=mock`).
 
 ---
 
-## Running the Project
+## Running the Stack
 
-### Full stack via Docker Compose
+**Full stack via Docker Compose:**
 
 ```bash
-# All services + infrastructure
 docker compose up
 
-# Watch logs for a specific service
+# Tail a specific service
 docker compose logs -f acquiring-service
 ```
 
-### Individual services from terminal / IDE
+**Individual services (from IDE or terminal):**
 
 ```bash
-# Start infra first
+# Start infrastructure first
 docker compose up postgres redis kafka zookeeper mock-upstream
 
-# Each service from its module directory (Spring Boot devtools auto-restart enabled)
+# Start a service with Spring Boot devtools auto-restart
 mvn spring-boot:run -pl services/acquiring-service
 
-# Terminal simulator (standalone Java app, no Spring)
+# Run the terminal simulator (standalone Java app)
 java -jar tools/terminal-simulator/target/terminal-simulator-*.jar \
   --scenario NORMAL_PURCHASE
 ```
 
-**Available terminal simulator scenarios:**
-```
-NORMAL_PURCHASE     standard chip+PIN
-CONTACTLESS         NFC, amount ≤ ₹5000, no PIN
-CONTACTLESS_PIN     NFC, amount > ₹5000, PIN required
-TIMEOUT             no response — triggers 15s reversal
-DECLINE_NSF         Field 39 = 51
-DUPLICATE           same STAN twice — idempotency test
-PARTIAL_REVERSAL    auth ₹10000, capture ₹8000
-```
+**Terminal simulator scenarios:**
 
-### Local endpoints
-
-| Endpoint | URL |
+| Scenario | Description |
 |---|---|
-| Payment Simulator UI | http://localhost:3000 |
-| Merchant Dashboard | http://localhost:3001 |
-| Ops Dashboard | http://localhost:3002 |
-| Acquiring REST API | http://localhost:8080 |
-| Acquiring ISO 8583 TCP | localhost:8000 |
-| Payment Switch | http://localhost:8100 |
-| Jaeger (traces) | http://localhost:16686 |
-| MailHog (email) | http://localhost:8025 |
-| LocalStack (S3) | http://localhost:4566 |
+| `NORMAL_PURCHASE` | Standard chip + PIN, approval expected |
+| `CONTACTLESS` | NFC, amount ≤ ₹5000, no PIN required |
+| `CONTACTLESS_PIN` | NFC, amount > ₹5000, CVM limit exceeded |
+| `TIMEOUT` | Network response suppressed — triggers 15s reversal |
+| `DECLINE_NSF` | Field 39 = 51 (insufficient funds) |
+| `DUPLICATE` | Same STAN twice — idempotency gate test |
+| `PARTIAL_REVERSAL` | Authorize ₹10,000, capture ₹8,000 |
 
 ---
 
 ## Testing
 
 ```bash
-# Unit tests + ArchUnit (all modules) — fast, no infrastructure
+# Unit tests + ArchUnit (no infrastructure required)
 mvn test
 
-# Domain module only — also enforces JaCoCo 90% gate
+# Domain module only (also enforces JaCoCo 90% gate)
 mvn test -pl domain
 
-# Integration tests with Testcontainers (real Postgres/Redis/Kafka)
+# Integration tests with Testcontainers (real Postgres / Redis / Kafka)
 mvn verify -P integration-tests
 
-# Skip tests for a fast build
+# Skip tests
 mvn install -DskipTests
 ```
 
 **Test pyramid:**
 
-| Layer | Tool | Speed | What |
-|---|---|---|---|
-| Unit (domain) | JUnit 5 + AssertJ | ~1s | Pure Java, no Spring context |
-| Architecture | ArchUnit | ~2s | Hexagonal + SOLID rules enforced |
-| Adapter | @DataJpaTest + Testcontainers | ~10s | Real Postgres/Redis |
-| Integration | @SpringBootTest + Testcontainers | ~30s | Full service stack |
-| Chaos | WireMock delay/drop | ~60s | Timeout, race conditions, duplicates |
-| Contract | Pact | ~20s | Terminal ↔ acquiring ↔ switch |
-| Load | k6 | ~10min | 500 TPS, p95 < 500ms — post-June |
+| Layer | Tool | Notes |
+|---|---|---|
+| Unit (domain) | JUnit 5 + AssertJ | Pure Java, no Spring context, ~1s |
+| Architecture | ArchUnit | Hexagonal rules, constructor injection, ~2s |
+| Adapter | `@DataJpaTest` + Testcontainers | Real Postgres + Redis, ~10s |
+| Integration | `@SpringBootTest` + Testcontainers | Full service stack, ~30s |
+| Chaos | WireMock delay / drop | Timeout, race condition, duplicate scenarios |
+| Contract | Pact | Terminal ↔ acquiring ↔ switch |
+| Load | k6 | 500 TPS, p95 < 500ms |
 
-**Coverage gate:** JaCoCo enforces 90% line coverage on the domain module. Build fails below threshold.
+**JaCoCo gate:** ≥90% line coverage enforced on the domain module. Build fails below threshold.
 
 **Test tags:**
+
 ```bash
-# Run only unit tests
 mvn test -Dgroups=unit
-
-# Integration tests only
 mvn test -Dgroups=integration
-
-# Exclude chaos and load (default CI behaviour)
 mvn test -DexcludedGroups=chaos,load
 ```
 
 ---
 
-## CI/CD Pipeline
+## Services and Ports
 
-GitHub Actions — `.github/workflows/ci-cd.yml`
+### Backend
 
-```
-push feat/** or fix/**  →  [test]
-push main               →  [test] → [integration-test] → [build-push] → [deploy-dev] → [deploy-qa] → [deploy-prod ⏸️]
-```
-
-| Job | Trigger | What |
+| Service | Ports | Description |
 |---|---|---|
-| `test` | All branches | Unit + ArchUnit · JaCoCo report |
-| `integration-test` | `main` only | Testcontainers (real infra) |
-| `build-push` | `main` + `DEPLOY_ENABLED=true` | Docker build → ECR (tagged `{sha}` + `latest`) |
-| `deploy-dev` | After build-push | ECS rolling update on `payments-platform-dev` |
-| `deploy-qa` | After deploy-dev stable | ECS rolling update on `payments-platform-qa` |
-| `deploy-prod` | After deploy-qa + **manual approval** | ECS rolling update on `payments-platform` |
+| `acquiring-service` | 8080 (REST), 8000 (ISO 8583 TCP) | Entry point — ISO 8583 ingestion, idempotency, QR |
+| `payment-switch` | 8100 | Routing engine, HSM crypto, fraud scoring, timeout/reversal |
+| `mock-upstream` | 8001–8004 | Mock Visa / Mastercard / RuPay / UPI switch |
+| `webhook-dispatcher` | — | Kafka consumer → HMAC-signed HTTP delivery |
+| `merchant-simulator` | 9000 | Simulated merchant webhook receiver |
+| `settlement-service` | — | Spring Batch settlement job (23:30 IST) |
+| `reconciliation-service` | — | Three-way reconciliation (07:00 IST) |
+| `notification-service` | — | Kafka → Thymeleaf email |
+| `chargeback-service` | 8600 | Chargeback lifecycle and reserve account management |
+| `terminal-simulator` | — | Standalone POS terminal emulator (CLI) |
 
-AWS stages are gated by `vars.DEPLOY_ENABLED` (not a secret — secrets can't be used in `if:` conditions). Set to `'true'` in July when AWS is provisioned.
+### Frontend
 
-**Same Docker image SHA is promoted through all environments** — no rebuilds, truly immutable artifact.
+| App | Port | Description |
+|---|---|---|
+| Payment Simulator | 3000 | Card form + QR mode + live ISO 8583 event log |
+| Merchant Dashboard | 3001 | Transaction feed, switch health, settlement status |
+| Ops Dashboard | 3002 | Batch job control, dead-letter queue management |
+
+### Infrastructure (Docker Compose)
+
+| Service | Port | UI |
+|---|---|---|
+| PostgreSQL | 5432 | — |
+| Redis | 6379 | — |
+| Kafka | 9092 | — |
+| MailHog | 1025 (SMTP) | http://localhost:8025 |
+| LocalStack | 4566 | — |
+| Jaeger | 4317 (OTLP) | http://localhost:16686 |
 
 ---
 
-## Configuration Reference
+## Configuration
 
 ### Adapter toggles
 
+All adapters swap via a single environment variable — no domain code changes required.
+
 | Variable | Values | Default | Description |
 |---|---|---|---|
-| `UPSTREAM_PROVIDER` | `wiremock` / `razorpay` | `wiremock` | Network upstream |
-| `HSM_PROVIDER` | `mock` / `softhsm` | `mock` | HSM adapter |
-| `STORAGE_PROVIDER` | `local` / `s3` | `local` | File storage |
-| `DB_PROVIDER` | `postgres` | `postgres` | Database adapter |
-
-All adapters swap via a single config property — zero domain code changes.
+| `UPSTREAM_PROVIDER` | `wiremock` · `razorpay` | `wiremock` | Network upstream |
+| `HSM_PROVIDER` | `mock` · `softhsm` | `mock` | HSM adapter |
+| `STORAGE_PROVIDER` | `local` · `s3` | `local` | File storage |
 
 ### Key environment variables
 
@@ -380,93 +345,41 @@ STORAGE_PROVIDER=local
 HSM_PKCS11_LIB=/usr/lib/softhsm/libsofthsm2.so
 HSM_TOKEN_PIN=1234
 
-# Email
-SPRING_MAIL_HOST=localhost
-SPRING_MAIL_PORT=1025
-
-# AWS (production only — use IAM role on ECS, not keys)
+# AWS (production — use IAM role on ECS, not static keys)
 AWS_REGION=ap-south-1
 S3_BUCKET=payments-platform-dev
 ```
 
 ### Spring profiles
 
-| Profile | Use | Logging | show-sql |
-|---|---|---|---|
-| `local` | Docker Compose | DEBUG | true |
-| `dev` | AWS ECS dev cluster | DEBUG | true |
-| `qa` | AWS ECS qa cluster | INFO | false |
-| `prod` | AWS ECS production | INFO | false |
+| Profile | Use | Logging |
+|---|---|---|
+| `local` | Docker Compose | DEBUG |
+| `dev` | AWS dev cluster | DEBUG |
+| `qa` | AWS QA cluster | INFO |
+| `prod` | AWS production | INFO |
 
 ---
 
-## Services and Ports
+## CI/CD
 
-### Backend services
+GitHub Actions — `.github/workflows/ci-cd.yml`
 
-| Service | Ports | Description |
+```
+push feat/** or fix/**  →  test
+push main               →  test → integration-test → build-push → deploy-dev → deploy-qa → deploy-prod (manual gate)
+```
+
+| Job | Trigger | Action |
 |---|---|---|
-| `acquiring-service` | 8000 (ISO 8583 TCP), 8080 (REST) | Entry point — ISO 8583 validation, idempotency, QR |
-| `payment-switch` | 8100 | Routing, HSM crypto, fraud engine, timeout/reversal |
-| `mock-upstream` | 8001 (Visa), 8002 (MC), 8003 (RuPay), 8004 (UPI) | Mock Visa/MC/NPCI switch |
-| `webhook-dispatcher` | — | Kafka consumer → HMAC-signed HTTP delivery |
-| `merchant-simulator` | 9000 | Simulated merchant backend receiving webhooks |
-| `settlement-service` | — | Spring Batch job at 23:30 IST |
-| `reconciliation-service` | — | Three-way match at 07:00 IST |
-| `notification-service` | — | Kafka → Thymeleaf email templates |
-| `chargeback-service` | 8600 | Chargeback lifecycle, evidence packaging, reserve accounts |
-| `terminal-simulator` | — | Standalone POS terminal emulator |
+| `test` | All branches | Unit tests + ArchUnit + JaCoCo |
+| `integration-test` | `main` | Testcontainers integration suite |
+| `build-push` | `main` | Docker build → ECR (tagged `{sha}` + `latest`) |
+| `deploy-dev` | After build | ECS rolling update — dev cluster |
+| `deploy-qa` | After deploy-dev | ECS rolling update — QA cluster |
+| `deploy-prod` | Manual approval | ECS rolling update — production |
 
-### Frontend apps
-
-| App | Port | Description |
-|---|---|---|
-| Payment Simulator | 3000 | Card form + QR mode + live ISO 8583 event log |
-| Merchant Dashboard | 3001 | Transaction feed, switch health, settlement status, QR |
-| Ops Dashboard | 3002 | Batch job control, dead letter queue, switch health |
-
-### Infrastructure (Docker Compose)
-
-| Service | Port | UI |
-|---|---|---|
-| PostgreSQL | 5432 | — |
-| Redis | 6379 | — |
-| Kafka | 9092 | — |
-| MailHog | 1025 (SMTP) | http://localhost:8025 |
-| LocalStack (S3) | 4566 | — |
-| Jaeger | 4317 (OTLP) | http://localhost:16686 |
-| mock-upstream | 8001–8004 | — |
-
----
-
-## Roadmap
-
-### v1.0.0 — Full backend + all three frontends (June 2026)
-
-Complete ISO 8583 golden path, SoftHSM2 cryptography, dynamic QR, timeout/reversal, webhooks, Spring Batch settlement, three-way reconciliation, chargeback lifecycle, all three Next.js 15 App Router frontends, AWS ECS deployment, CloudFront CDN.
-
-### v1.1.0–v1.6.0 — Post-June additions (July–September 2026, weekends)
-
-Progressive enhancements built over 13 weekend sessions:
-
-| Version | Target | What |
-|---|---|---|
-| v1.1 | Jul W1-W2 | TypeScript strict frontend migration · OpenAPI · Sentry · PgBouncer · Circuit Breaker · Feature flags · OWASP ZAP |
-| v1.2 | Jul W3-W4 | LangGraph multi-agent fraud scoring · pgvector HNSW · Streaming embedding pipeline · Langfuse · Evals (ragas + promptfoo) · Guardrails AI · Prompt caching · LiteLLM |
-| v1.3 | Aug W1-W2 | Terraform IaC (full AWS stack) |
-| v1.4 | Aug W3-W4 | Kubernetes + Helm · ArgoCD GitOps · Argo Rollouts canary/blue-green · KEDA · Grafana LGTM stack |
-| v1.5 | Sep W1-W2 | gRPC · GraphQL · Temporal workflows · Debezium CDC · Schema Registry + Avro · ISO 20022 pacs.008/camt.053 |
-| v1.6 | Sep W3-W4 | Security CI pipeline (Trivy, SonarQube, Semgrep) · LitmusChaos · k6 load tests · Storybook · PostHog |
-| v2.0 | Sep 30 | MLflow + DVC + fine-tuning (LoRA/vLLM) · MCP server · NFC Tap to Pay (iOS/Android) · Apple Watch companion |
-
-### Stubbed — documented, not yet implemented
-
-- Real NPCI/Visa/MC network connections (legally impossible as an individual — WireMock mock)
-- React Native merchant app with NFC Tap to Pay (§20.8–20.9 in CLAUDE.md)
-- Apple Watch companion (§20.10)
-- ISO 20022 large-value settlement path
-- ML fraud scoring service (port is defined — `FraudScoringPort`, `FraudScore.mlRiskScore()`)
-- Grafana dashboards (Prometheus metrics are exposed, dashboards are July addition)
+The same Docker image SHA is promoted through all environments — no rebuilds between stages.
 
 ---
 
@@ -474,33 +387,33 @@ Progressive enhancements built over 13 weekend sessions:
 
 ```
 payments-platform/
-├── pom.xml                          ← parent POM, 14 modules, dependency management
-├── CLAUDE.md                        ← complete project spec and architecture reference
-├── docker-compose.yml               ← full local stack
+├── pom.xml                          ← parent POM, 14 modules
+├── docker-compose.yml               ← full local infrastructure stack
 ├── .github/
-│   └── workflows/ci-cd.yml          ← 6-job pipeline (test → build → deploy-dev → qa → prod)
+│   └── workflows/ci-cd.yml
 │
-├── domain/                          ← ZERO external dependencies, enforced by ArchUnit
+├── domain/                          ← zero external dependencies (enforced by ArchUnit)
 │   └── src/main/java/com/payments/domain/
-│       ├── model/                   ← Transaction, TransactionStatus, enums, FraudVelocityData
-│       │   └── vo/                  ← Money, PanHash, MerchantId, TerminalId, STAN, ARN, AuthCode
+│       ├── model/                   ← Transaction, TransactionStatus, value objects
+│       │   ├── vo/                  ← Money, PanHash, MerchantId, TerminalId, STAN, ARN
+│       │   └── event/               ← domain events (TransactionAuthorizedEvent, …)
 │       ├── port/
 │       │   ├── inbound/             ← use-case interfaces (ProcessPaymentUseCase, …)
 │       │   └── outbound/            ← port interfaces (AuthorizationPort, HsmPort, …)
 │       └── service/                 ← TransactionStateMachine, FraudEngine, RoutingEngine, …
 │
 ├── application/                     ← Spring @Configuration only, no business logic
-├── adapters/                        ← all infrastructure (jPOS, SoftHSM2, Postgres, Redis, Kafka)
-├── test-support/                    ← shared Testcontainers singletons + test fixtures
+├── adapters/                        ← all infrastructure (jPOS, SoftHSM2, JPA, Kafka, Redis)
+├── test-support/                    ← Testcontainers singletons + shared test fixtures
 │
 ├── services/
 │   ├── acquiring-service/           ← ISO 8583 TCP + REST entry point
-│   ├── payment-switch/              ← core routing and processing
-│   ├── mock-upstream/               ← mock Visa/MC/NPCI/UPI
+│   ├── payment-switch/              ← routing, HSM crypto, fraud, reversal
+│   ├── mock-upstream/               ← mock Visa / Mastercard / RuPay / UPI
 │   ├── webhook-dispatcher/          ← HMAC-signed event delivery
-│   ├── merchant-simulator/          ← webhook receiver for testing
+│   ├── merchant-simulator/          ← webhook receiver
 │   ├── settlement-service/          ← Spring Batch daily job
-│   ├── reconciliation-service/      ← three-way match algorithm
+│   ├── reconciliation-service/      ← three-way match
 │   ├── notification-service/        ← Kafka → email
 │   └── chargeback-service/          ← chargeback lifecycle
 │
@@ -510,28 +423,44 @@ payments-platform/
 │   └── ops/                         ← Next.js 15 — ops dashboard
 │
 ├── tools/
-│   └── terminal-simulator/          ← standalone Java POS terminal emulator
+│   └── terminal-simulator/          ← standalone POS terminal emulator (CLI)
 │
 └── docs/
-    ├── learning-concepts-checklist.md
+    ├── code-learning-map.md         ← file → CS concept → one-line insight
     ├── project-walkthrough.md
-    └── ticket-*.md                  ← one per closed ticket
+    └── ticket-*.md                  ← design decisions per closed ticket
 ```
 
 ---
 
-## Demo Script
+## Roadmap
 
-**Setup:** `docker compose up` → wait ~60 seconds → `http://localhost:3000`
+### v1.0.0 — Core platform (in progress)
 
-**Demo 1 — Card transaction (45s)**
-Open Simulator → Card mode → PAN `4539148803436467`, Expiry `12/28`, CVV `123`, Amount `₹6000`, Scenario `Normal Purchase` → Pay. Watch event log: ARQC verified, fraud LOW, AUTHORIZED in ~800ms. Switch to Dashboard → transaction appears in live feed. Click row → full ISO 8583 detail drawer.
+ISO 8583 golden path · SoftHSM2 cryptography · dynamic QR · timeout/reversal · webhooks · Spring Batch settlement · three-way reconciliation · chargeback lifecycle · three Next.js 15 frontends · AWS ECS deployment
 
-**Demo 2 — Dynamic QR (45s)**
-Simulator → QR mode → `₹500` → Generate. Scannable QR appears. Scan with phone → UPI app opens, amount pre-filled. Approve → Dashboard shows AUTHORIZED instantly via SSE. MailHog shows merchant webhook email.
+### v2.0.0 — Platform extensions
 
-**Demo 3 — Timeout + reversal (60s)**
-Card mode → Scenario `Timeout + Reversal` → Pay. Watch: 0100 sent → 15s → reversal fired → REVERSED. Dashboard shows REVERSED with full state machine timeline.
+| Area | Additions |
+|---|---|
+| APIs | gRPC service-to-service · GraphQL BFF · OpenAPI 3.1 |
+| Resilience | Resilience4j circuit breaker and bulkhead · Temporal durable workflows |
+| Data | Debezium CDC · Schema Registry + Avro · Elasticsearch |
+| Infrastructure | Terraform · Kubernetes + Helm · ArgoCD · KEDA · Grafana LGTM |
+| AI / ML | LangGraph multi-agent fraud scoring · pgvector HNSW · RAG · Langfuse evals |
+| Security | Trivy · SonarQube · OWASP Dependency Check · Semgrep · LitmusChaos |
+| Mobile | React Native NFC · watchOS companion · ISO 20022 large-value path |
 
-**Demo 4 — Settlement + reconciliation (45s)**
-Ops Dashboard → click `[Run Now]` on Settlement → Spring Batch job runs, progress visible → CSVs appear in LocalStack S3. Click `[Run Now]` on Reconciliation → three-way match runs → RECON summary. MailHog: ops completion email.
+### Not yet implemented
+
+- Live network connections to Visa / Mastercard / NPCI (replaced by WireMock mock-upstream)
+- ML fraud scoring (port defined: `FraudScoringPort`, `FraudScore.mlRiskScore()`)
+- Grafana dashboards (Prometheus metrics are exposed via Actuator)
+- React Native mobile apps and Apple Watch companion
+- ISO 20022 pacs.008 / camt.053 settlement path
+
+---
+
+## License
+
+[MIT](LICENSE)
