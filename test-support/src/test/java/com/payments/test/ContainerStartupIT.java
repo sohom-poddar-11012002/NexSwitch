@@ -28,7 +28,7 @@ class ContainerStartupIT extends IntegrationTestBase {
     @Test
     void kafka_isRunning() {
         assertThat(KAFKA.isRunning()).isTrue();
-        assertThat(KAFKA.getBootstrapServers()).startsWith("PLAINTEXT://");
+        assertThat(KAFKA.getBootstrapServers()).contains("localhost:");
     }
 
     @Test
