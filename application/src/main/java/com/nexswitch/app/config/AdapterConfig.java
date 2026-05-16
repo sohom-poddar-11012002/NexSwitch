@@ -2,6 +2,9 @@ package com.nexswitch.app.config;
 
 import org.springframework.context.annotation.Configuration;
 
+// LEARN: @ConditionalOnProperty is the Spring idiom for the Strategy pattern — swap implementations
+//        (mock HSM locally, SoftHSM in staging, real HSM in prod) via a single config property
+//        without touching domain code. The domain port interface stays identical across all envs.
 /**
  * Wires domain ports to their adapter implementations via @ConditionalOnProperty.
  *
