@@ -25,7 +25,7 @@ CREATE INDEX idx_audit_log_recorded_at
 -- Note: revoke requires the user to exist; in local dev this may be a no-op
 DO $$
 BEGIN
-    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'payments_app') THEN
-        REVOKE UPDATE, DELETE ON audit_log FROM payments_app;
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'nexswitch_app') THEN
+        REVOKE UPDATE, DELETE ON audit_log FROM nexswitch_app;
     END IF;
 END $$;

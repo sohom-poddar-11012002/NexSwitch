@@ -6,14 +6,14 @@ services:
   postgres:
     image: postgres:18-alpine
     environment:
-      POSTGRES_DB: payments
-      POSTGRES_USER: payments_app
+      POSTGRES_DB: nexswitch
+      POSTGRES_USER: nexswitch_app
       POSTGRES_PASSWORD: ${DB_PASSWORD:-local_dev_password}
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U payments_app -d payments"]
+      test: ["CMD-SHELL", "pg_isready -U nexswitch_app -d nexswitch"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -108,8 +108,8 @@ services:
       - "8000:8000"   # ISO 8583 TCP
       - "8080:8080"   # REST (QR, status, management)
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/payments
-      DB_USERNAME: payments_app
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-local_dev_password}
@@ -140,8 +140,8 @@ services:
       dockerfile: services/payment-switch/Dockerfile
     ports: ["8100:8100"]
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/payments
-      DB_USERNAME: payments_app
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-local_dev_password}
@@ -159,8 +159,8 @@ services:
       dockerfile: services/webhook-dispatcher/Dockerfile
     ports: ["8200:8200"]
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/payments
-      DB_USERNAME: payments_app
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local
@@ -183,8 +183,8 @@ services:
       dockerfile: services/settlement-service/Dockerfile
     ports: ["8300:8300"]
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/payments
-      DB_USERNAME: payments_app
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
@@ -199,8 +199,8 @@ services:
       dockerfile: services/reconciliation-service/Dockerfile
     ports: ["8400:8400"]
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/payments
-      DB_USERNAME: payments_app
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
@@ -227,8 +227,8 @@ services:
       dockerfile: services/chargeback-service/Dockerfile
     ports: ["8600:8600"]
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/payments
-      DB_USERNAME: payments_app
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local

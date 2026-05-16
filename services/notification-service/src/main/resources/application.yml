@@ -3,8 +3,8 @@ spring:
     name: notification-service
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/payments}
-    username: ${DB_USERNAME:payments_app}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nexswitch}
+    username: ${DB_USERNAME:nexswitch_app}
     password: ${DB_PASSWORD:local_dev_password}
     hikari:
       maximum-pool-size: 10

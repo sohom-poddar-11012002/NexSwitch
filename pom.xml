@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.payments</groupId>
-    <artifactId>payments-platform</artifactId>
+    <groupId>com.nexswitch</groupId>
+    <artifactId>nexswitch</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>Payments Platform</name>
-    <description>Production-grade Indian payment switch and acquirer processor</description>
+    <name>NexSwitch</name>
+    <description>NexSwitch — production-grade Indian payment switch and acquirer processor</description>
 
     <!-- Reactor: order matters — dependencies before dependents -->
     <modules>
@@ -79,22 +79,22 @@
 
             <!-- Internal modules -->
             <dependency>
-                <groupId>com.payments</groupId>
+                <groupId>com.nexswitch</groupId>
                 <artifactId>domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.payments</groupId>
+                <groupId>com.nexswitch</groupId>
                 <artifactId>application</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.payments</groupId>
+                <groupId>com.nexswitch</groupId>
                 <artifactId>adapters</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.payments</groupId>
+                <groupId>com.nexswitch</groupId>
                 <artifactId>test-support</artifactId>
                 <version>${project.version}</version>
                 <scope>test</scope>

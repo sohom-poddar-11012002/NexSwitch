@@ -1,8 +1,8 @@
 # Ticket #7 — All Ports (Inbound + Outbound + FraudScoringPort)
 
 ## What
-29 Java 21 files in `com.payments.domain.port.inbound/`, `com.payments.domain.port.outbound/`,
-and `com.payments.domain.model/` that define every contract between the domain core and the
+29 Java 21 files in `com.nexswitch.domain.port.inbound/`, `com.nexswitch.domain.port.outbound/`,
+and `com.nexswitch.domain.model/` that define every contract between the domain core and the
 outside world — five inbound use case interfaces, five commands, nine outbound port interfaces,
 two port-specific types, and seven result/model types.
 

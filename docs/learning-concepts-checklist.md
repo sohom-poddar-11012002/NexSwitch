@@ -1,4 +1,4 @@
-# Learning Concepts Checklist — Payments Platform
+# Learning Concepts Checklist — NexSwitch
 ### Complete Prep Plan · Concept Checklist · Resources · Timeline
 *7–8h/day till June 30 (4h learning + 3–4h project) → 4–5h/day July–December (DSA/System Design practice)*
 
@@ -356,7 +356,7 @@ Oct 1 → Dec 31     (13 weeks)  POLISH + APPLY PHASE
 - [ ] Why: forces API design before implementation; produces documentation that never goes stale
 
 ### ArchUnit — P1 🔥
-- [ ] `@AnalyzeClasses(packages="com.payments")` — scan all classes in package
+- [ ] `@AnalyzeClasses(packages="com.nexswitch")` — scan all classes in package
 - [ ] Write architectural rules as regular JUnit tests — violations = test failure = CI failure
 - [ ] `noClasses().that().resideInAPackage("..domain..").should().dependOnClassesThat().resideInAPackage("org.springframework..")`
 - [ ] Prevents accidental architectural erosion as codebase grows

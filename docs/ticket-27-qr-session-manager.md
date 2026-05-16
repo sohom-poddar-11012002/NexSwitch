@@ -23,7 +23,7 @@ The service is required before any QR use-case implementation in adapters or app
   a static `DateTimeFormatter` that triggers JDK locale class loading at test runtime. JaCoCo
   0.8.13 cannot instrument Java 26 class files (version 70) and threw
   `IllegalArgumentException: Unsupported class file major version 70` on
-  `sun/text/resources/cldr/ext/FormatData_en_IN`. Adding `<includes>com/payments/**</includes>`
+  `sun/text/resources/cldr/ext/FormatData_en_IN`. Adding `<includes>com/nexswitch/**</includes>`
   limits instrumentation to project classes only, fixing the issue without downgrading the JVM.
 
 - **URL encoding via `java.net.URLEncoder`**: Part of the JDK standard library; no external

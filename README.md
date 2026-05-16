@@ -1,4 +1,4 @@
-# Payments Platform
+# NexSwitch
 
 [![CI](https://github.com/sohom-poddar-11012002/PaymentsPlatform/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/sohom-poddar-11012002/PaymentsPlatform/actions/workflows/ci-cd.yml)
 [![Coverage](https://img.shields.io/badge/domain%20coverage-%E2%89%A590%25-brightgreen)](#testing)
@@ -181,7 +181,7 @@ docker compose up postgres redis kafka zookeeper mailhog localstack jaeger mock-
 ```bash
 # macOS
 brew install softhsm
-softhsm2-util --init-token --slot 0 --label "payments-hsm" --pin 1234 --so-pin 5678
+softhsm2-util --init-token --slot 0 --label "nexswitch-hsm" --pin 1234 --so-pin 5678
 
 # .env
 HSM_PROVIDER=softhsm
@@ -325,8 +325,8 @@ All adapters swap via a single environment variable — no domain code changes r
 
 ```env
 # Database
-DB_URL=jdbc:postgresql://localhost:5432/payments
-DB_USERNAME=payments_app
+DB_URL=jdbc:postgresql://localhost:5432/nexswitch
+DB_USERNAME=nexswitch_app
 DB_PASSWORD=local_dev_password
 
 # Redis
@@ -347,7 +347,7 @@ HSM_TOKEN_PIN=1234
 
 # AWS (production — use IAM role on ECS, not static keys)
 AWS_REGION=ap-south-1
-S3_BUCKET=payments-platform-dev
+S3_BUCKET=nexswitch-dev
 ```
 
 ### Spring profiles
@@ -386,14 +386,14 @@ The same Docker image SHA is promoted through all environments — no rebuilds b
 ## Project Structure
 
 ```
-payments-platform/
+nexswitch/
 ├── pom.xml                          ← parent POM, 14 modules
 ├── docker-compose.yml               ← full local infrastructure stack
 ├── .github/
 │   └── workflows/ci-cd.yml
 │
 ├── domain/                          ← zero external dependencies (enforced by ArchUnit)
-│   └── src/main/java/com/payments/domain/
+│   └── src/main/java/com/nexswitch/domain/
 │       ├── model/                   ← Transaction, TransactionStatus, value objects
 │       │   ├── vo/                  ← Money, PanHash, MerchantId, TerminalId, STAN, ARN
 │       │   └── event/               ← domain events (TransactionAuthorizedEvent, …)

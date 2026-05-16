@@ -16,7 +16,7 @@ publishes the events. Typed payloads (authCode, responseCode, amount) let consum
 without looking up the transaction again.
 
 ## Design Decisions
-- **Package**: `com.payments.domain.model.event` — events are domain model types, not port types.
+- **Package**: `com.nexswitch.domain.model.event` — events are domain model types, not port types.
 - **Envelope fields**: `eventId` (UUID), `eventType`, `schemaVersion` (always 1, versioned from day one), `aggregateId`, `aggregateType`, `producerService` ("domain"), `occurredAt`, typed `payload`. Matches §12.4.
 - **`DomainEvent.of()` factory**: generates the UUID, timestamps now, sets schemaVersion=1 and producerService="domain". Direct constructor is still available for test doubles.
 - **Aggregate methods vs state machine**: `Transaction.authorize()`, `decline()`, `initiateReversal()`, `receiveChargeback()` own both the validation and the typed event — this is the "Tell Don't Ask" path (§2.11). `TransactionStateMachine.transition()` is the generic path (no authCode/responseCode), still raises a `DomainEvent<TransactionStatus>` so existing state-machine tests need no structural change.
