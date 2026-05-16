@@ -65,15 +65,15 @@ Hexagonal architecture (Ports and Adapters), enforced at build time by ArchUnit.
                            │  imports domain only
 ┌──────────────────────────▼──────────────────────────────────┐
 │                    Application Layer                        │
-│  Spring Boot wiring only. No business logic.               │
-│  @Bean · @Configuration · use-case orchestration           │
+│  Spring Boot wiring only. No business logic.                │
+│  @Bean · @Configuration · use-case orchestration            │
 └──────────────────────────┬──────────────────────────────────┘
                            │  imports domain + application
 ┌──────────────────────────▼──────────────────────────────────┐
 │                    Adapters Layer                           │
-│  All infrastructure. Implements domain ports.              │
-│  jPOS · SoftHSM2 · Kafka · PostgreSQL · Redis · S3        │
-│  Domain never imports from here.                           │
+│  All infrastructure. Implements domain ports.               │
+│  jPOS · SoftHSM2 · Kafka · PostgreSQL · Redis · S3          │
+│  Domain never imports from here.                            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
