@@ -3,10 +3,10 @@ package com.payments.test;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.KafkaContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -28,8 +28,8 @@ import org.testcontainers.utility.DockerImageName;
 public abstract class IntegrationTestBase {
 
     @Container
-    static final PostgreSQLContainer<?> POSTGRES =
-        new PostgreSQLContainer<>("postgres:16-alpine")
+    static final PostgreSQLContainer POSTGRES =
+        new PostgreSQLContainer("postgres:18-alpine")
             .withDatabaseName("payments_test")
             .withUsername("payments_app")
             .withPassword("test_password")
@@ -38,14 +38,14 @@ public abstract class IntegrationTestBase {
     @Container
     @SuppressWarnings("resource")
     static final GenericContainer<?> REDIS =
-        new GenericContainer<>("redis:7-alpine")
+        new GenericContainer<>("redis:8-alpine")
             .withExposedPorts(6379)
             .withCommand("redis-server", "--requirepass", "test_password")
             .withReuse(true);
 
     @Container
     static final KafkaContainer KAFKA =
-        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"))
+        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:8.2.0"))
             .withReuse(true);
 
     @DynamicPropertySource

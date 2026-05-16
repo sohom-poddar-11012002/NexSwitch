@@ -19,6 +19,8 @@ target/
 .project
 .settings/
 *.class
+postman/
+.postman/
 
 # Logs
 *.log
