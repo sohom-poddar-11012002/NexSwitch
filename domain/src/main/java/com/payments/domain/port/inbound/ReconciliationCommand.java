@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Set;
 
+// LEARN: CommandObject — Set<PaymentNetwork> allows per-network reconciliation runs
 public record ReconciliationCommand(
         LocalDate reconciliationDate,
         Set<PaymentNetwork> networks

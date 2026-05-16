@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+// LEARN: JpaEntity — ORM model; separate from MerchantProfile domain record to allow schema evolution
 @Entity
 @Table(name = "merchants")
 public class MerchantEntity {

@@ -5,6 +5,7 @@ import com.payments.domain.model.vo.Money;
 
 import java.math.BigDecimal;
 
+// LEARN: RichDomainModel — isActive() and limit checks live here, not in service; domain carries behaviour
 public record MerchantProfile(
     MerchantId merchantId,
     String name,

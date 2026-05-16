@@ -5,6 +5,7 @@ import com.payments.domain.model.vo.Money;
 
 import java.time.Instant;
 
+// LEARN: DomainTTL — expiresAt is a domain concept; Redis TTL is an implementation detail of the adapter
 public final class QRSession {
 
     private final String txnRef;

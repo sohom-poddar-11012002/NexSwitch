@@ -7,6 +7,7 @@ import com.payments.domain.model.vo.TerminalId;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+// LEARN: CommandObject — validated at boundary (amount > 0, orderId not blank) before hitting domain
 public record QRGenerationCommand(
         MerchantId merchantId,
         TerminalId terminalId,

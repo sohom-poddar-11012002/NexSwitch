@@ -1,5 +1,6 @@
 package com.payments.domain.service;
 
+// LEARN: LuhnAlgorithm — validates PAN checksum at terminal boundary before network round-trip
 public final class LuhnValidator {
 
     private LuhnValidator() {}

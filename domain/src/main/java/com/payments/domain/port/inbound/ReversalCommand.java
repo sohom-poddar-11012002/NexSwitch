@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
 
+// LEARN: CommandObject — reversalAmount <= originalAmount validated at construction
 public record ReversalCommand(
         UUID originalTransactionId,
         SystemTraceAuditNumber originalStan,

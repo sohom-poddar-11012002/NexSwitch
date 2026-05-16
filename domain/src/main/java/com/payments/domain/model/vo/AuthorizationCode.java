@@ -1,5 +1,6 @@
 package com.payments.domain.model.vo;
 
+// LEARN: NetworkAssigned — 6-char approval code from issuer; absent until AUTHORIZED state
 public record AuthorizationCode(String value) {
 
     private static final int REQUIRED_LENGTH = 6;

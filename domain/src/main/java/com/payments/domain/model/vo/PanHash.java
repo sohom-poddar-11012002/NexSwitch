@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+// LEARN: PCI-DSS — SHA-256 applied at terminal boundary; raw PAN never stored or logged after fromRawPan()
 public record PanHash(String value) {
 
     private static final int SHA256_HEX_LENGTH = 64;

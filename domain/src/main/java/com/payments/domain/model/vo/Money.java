@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
 
+// LEARN: ValueObject — BigDecimal+Currency pair; scale 2 HALF_UP enforced at construction; add() checks currency
 public record Money(BigDecimal amount, Currency currency) {
 
     public Money {

@@ -3,6 +3,7 @@ package com.payments.adapters.outbound.persistence.entity;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+// LEARN: JpaEntity — String PK matches ISO 8583 field 41 (8-char terminal ID)
 @Entity
 @Table(name = "terminals")
 public class TerminalEntity {

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+// LEARN: OptimisticLocking — @Version field; JPA increments on every UPDATE, throws on stale read
 @Entity
 @Table(name = "transactions")
 public class TransactionEntity {

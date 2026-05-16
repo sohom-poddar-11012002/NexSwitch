@@ -4,6 +4,7 @@ import com.payments.domain.model.vo.Money;
 
 import java.util.Optional;
 
+// LEARN: ValueObject — fee waterfall result; all components immutable in one record for audit trail
 public record FeeBreakdown(
     Money grossAmount,
     Money interchangeFee,

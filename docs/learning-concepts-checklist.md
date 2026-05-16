@@ -1939,6 +1939,90 @@ WHAT DETERMINES WHETHER YOU HIT THE HIGH OR LOW END:
 
 ---
 
+---
+
+## §31 — Systems Programming: Networking, OS, and Kernel Internals
+
+*Taught by building the Netty TCP server (#17), Resilience4j bulkhead (#34), and ZGC tuning (#68).*
+*Look for `// LEARN:` comments in those implementations for the exact concept in context.*
+
+### 31.1 TCP Connections and Ports
+
+| Concept | What it means | Where you see it |
+|---|---|---|
+| TCP 4-tuple | A connection = (src-ip, src-port, dst-ip, dst-port). One server port handles millions of connections — the port number is NOT the limit | Netty TCP server in acquiring-service |
+| File descriptors | Each socket = one FD. Default `ulimit -n` is 1024. Production servers set it to 1,000,000+ | `lsof` output climbing during load test |
+| SYN queue | Kernel holds half-open connections (SYN received, SYN-ACK sent, waiting for ACK). Size = `tcp_max_syn_backlog` | SYN flood attack exhausts this |
+| Accept queue | Fully established connections waiting for `accept()` syscall. Size = `listen(fd, backlog)`. If full, kernel drops new connections | `netstat -s` shows overflows |
+| `SO_REUSEPORT` | Multiple threads/processes bind the same port. Kernel round-robins incoming connections across them — eliminates single `accept()` bottleneck | Nginx workers, Netty multi-thread boss group |
+| TIME_WAIT | After connection close, socket stays in TIME_WAIT for 2×MSL (~60s) to catch delayed packets. Exhausts ephemeral ports under high churn | `SO_REUSEADDR` mitigates on server side |
+
+### 31.2 Non-Blocking I/O and the Reactor Pattern
+
+| Concept | What it means | Where you see it |
+|---|---|---|
+| Blocking I/O | Thread blocks on `read()`/`write()` until data arrives. Thread-per-connection = 1 thread per socket = doesn't scale | Old servlet containers (pre-NIO) |
+| Non-blocking I/O | `read()` returns immediately with EAGAIN if no data. Application polls or waits for event notification | Java NIO, Netty |
+| `select` / `poll` | Kernel notifies which FDs are ready. O(n) scan — degrades with thousands of FDs | Legacy; replaced by epoll |
+| `epoll` (Linux) / `kqueue` (macOS) | O(1) event notification — kernel maintains a ready list, only returns FDs with events | Netty uses this internally |
+| Reactor pattern | One event loop thread demultiplexes I/O events and dispatches to handlers. Netty's `EventLoop` is a reactor | acquiring-service TCP server |
+| C10K problem | "Can a server handle 10,000 concurrent connections?" — solved by epoll + non-blocking I/O | Netty handles C1M routinely |
+
+### 31.3 Kernel Round-Robin and Load Distribution
+
+| Concept | What it means | Where you see it |
+|---|---|---|
+| `SO_REUSEPORT` round-robin | Kernel hashes (src-ip, src-port) to pick which listening socket gets the connection — consistent for a given client | Netty boss thread group |
+| L4 load balancing | TCP-level: load balancer forwards packets without terminating the TCP connection. Faster, less CPU | AWS NLB, Kubernetes Service |
+| L7 load balancing | HTTP-level: terminates TLS, reads HTTP headers, routes by path/host. Slower, more features | AWS ALB, Kong, Nginx |
+| Kernel CFS scheduler | Completely Fair Scheduler divides CPU time in O(log n) via red-black tree. Each thread gets a time slice | Context switching cost under high thread count |
+| Context switch cost | Saving/restoring registers + flushing TLB = ~1–10μs. 10,000 threads = millions of μs/s wasted | Why event loops beat thread-per-connection |
+
+### 31.4 Memory and System Calls
+
+| Concept | What it means | Where you see it |
+|---|---|---|
+| Virtual memory | Each process sees its own address space. Kernel maps virtual → physical pages. Swap = page written to disk | JVM heap lives in virtual memory |
+| Page fault | Access to unmapped virtual page — kernel allocates physical page. Minor (page in memory) vs major (page on disk) | JVM startup, large heap allocation |
+| Stack vs heap | Stack: per-thread, fixed size (default 512KB–1MB). Heap: shared, GC-managed. Stack overflow = recursion too deep | `Thread.ofVirtual()` uses tiny stacks |
+| Syscall cost | Crossing user→kernel boundary = ~100ns. Batching reads/writes reduces syscall overhead | `sendfile()` zero-copy for file transfer |
+| Zero-copy | `sendfile()` moves data from file FD to socket FD entirely in kernel — no user-space buffer | Settlement file download, S3 streaming |
+| Virtual threads (JDK 21+) | JVM threads mapped M:N onto carrier (OS) threads. Blocking syscall parks virtual thread, carrier thread freed | Java 21+ `Executors.newVirtualThreadPerTaskExecutor()` |
+
+### 31.5 NUMA, CPU Affinity, and Interrupt Coalescing
+
+| Concept | What it means | Where you see it |
+|---|---|---|
+| NUMA | Multi-socket servers: each CPU has local RAM. Accessing remote RAM = 2–4× slower | ECS task placement, JVM `-XX:+UseNUMA` |
+| CPU affinity | Pin a thread to a specific CPU core — avoids cache invalidation from migration | Netty I/O thread pinning on high-throughput servers |
+| Interrupt coalescing | NIC batches interrupts instead of one per packet — reduces context switches at high packet rates | `ethtool -C` on Linux; relevant for 10Gbps+ links |
+| CPU cache hierarchy | L1 (4ns) → L2 (12ns) → L3 (40ns) → RAM (100ns). Cache-friendly data structures matter at high TPS | False sharing in concurrent `long[]` counters |
+
+### 31.6 Where Each Concept Appears in This Project
+
+| Ticket | Concepts learned |
+|---|---|
+| #17 — Netty TCP server | TCP 4-tuple, accept queue, SO_REUSEPORT, epoll, reactor pattern, C10K |
+| #34 — Resilience4j bulkhead | Semaphore vs thread-pool bulkhead mirrors kernel counting semaphores |
+| #68 — ZGC + latency tuning | Virtual memory, page faults, GC pause impact, HikariCP pool sizing, CPU affinity |
+| #15 — terminal-simulator TCP client | Ephemeral ports, TIME_WAIT, connection reuse |
+| #59 — KEDA + K8s HPA | L4 vs L7 load balancing, kernel round-robin vs ALB routing |
+| #63 — k6 load test | File descriptor limits, accept queue overflow, context switch cost under load |
+
+### 31.7 Resources
+
+| Resource | Type | Notes |
+|---|---|---|
+| *Systems Performance* — Brendan Gregg | 📖💰 | The bible for kernel/OS performance; covers epoll, NUMA, CPU affinity |
+| *Computer Networks* — Tanenbaum | 📖💰 | TCP state machine, socket internals, congestion control |
+| [Linux man pages — epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html) | 🆓 | Primary source for epoll semantics |
+| [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/) | 🆓 ⭐ | Best free intro to sockets; covers accept queue, SO_REUSEPORT |
+| [The C10K Problem — Dan Kegel](http://www.kegel.com/c10k.html) | 🆓 | Original essay; still the clearest explanation of why threads don't scale |
+| [Netty in Action](https://www.manning.com/books/netty-in-action) | 📖💰 | Reactor pattern, event loop, channel pipeline — directly applicable to #17 |
+| *Linux Kernel Development* — Robert Love | 📖💰 | CFS scheduler, virtual memory, syscalls — for going deeper |
+
+---
+
 *This document is the single source of truth for prep. Concepts checklist (Part 1) is the reference while building. Phased plan (Part 2) is the execution schedule. Resources (Part 3) tells you where to go for each topic.*
 
-*Last updated: May 2026 — based on Payswiff payments platform v1.0 (June target) and v2.0 (ongoing enhancements). Sections 29–30 added: NFC/Tap to Pay on iPhone and ISO 20022.*
+*Last updated: May 2026 — based on Payswiff payments platform v1.0 (June target) and v2.0 (ongoing enhancements). Sections 29–30 added: NFC/Tap to Pay on iPhone and ISO 20022. Section 31 added: Systems Programming — networking, OS, kernel internals.*

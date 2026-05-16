@@ -7,6 +7,7 @@ import com.payments.domain.model.event.DomainEvent;
 
 import java.util.Objects;
 
+// LEARN: StateMachine — single entry point for all state transitions; raises domain event on every change
 public class TransactionStateMachine {
 
     public Transaction transition(Transaction transaction, TransactionStatus target) {

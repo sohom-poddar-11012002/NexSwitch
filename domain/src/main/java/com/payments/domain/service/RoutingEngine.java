@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+// LEARN: StrategyPattern — three-tier: NFS → PRIMARY → SECONDARY; BIN drives tier selection
 public class RoutingEngine {
 
     public PaymentNetwork route(String pan, List<RoutingRule> rules) {

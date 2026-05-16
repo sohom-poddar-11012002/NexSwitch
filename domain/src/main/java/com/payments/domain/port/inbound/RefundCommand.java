@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
 
+// LEARN: CommandObject — refundAmount <= original enforced in domain service, not here
 public record RefundCommand(
         UUID originalTransactionId,
         Money refundAmount,

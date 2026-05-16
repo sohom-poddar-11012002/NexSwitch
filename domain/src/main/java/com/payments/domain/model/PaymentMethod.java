@@ -1,5 +1,6 @@
 package com.payments.domain.model;
 
+// LEARN: SmartEnum — isCard() / isUpi() keep routing logic out of switch statements in callers
 public enum PaymentMethod {
     CARD_CHIP,
     CONTACTLESS,

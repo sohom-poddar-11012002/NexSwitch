@@ -11,6 +11,7 @@ import java.util.Currency;
  * Shared MerchantProfile fixtures aligned with V11 seed data.
  * Use active() in tests that hit the real DB — the row already exists.
  */
+// LEARN: TestFixture — active() mirrors V11 seed row; tests read from Postgres seeded by Flyway, not by fixture
 public final class MerchantFixture {
 
     private static final Currency INR = Currency.getInstance("INR");

@@ -10,6 +10,7 @@ import org.mapstruct.Mapper;
 
 import java.util.Currency;
 
+// LEARN: MapStruct — all-default-method pattern; Transaction fluent accessors break @Mapping path resolution
 // Transaction uses fluent (non-JavaBeans) accessors — both directions are hand-written
 // default methods so MapStruct generates a Spring @Component impl without annotation processing errors.
 @Mapper(componentModel = "spring")

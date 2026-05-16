@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+// LEARN: DomainService — TTL and STAN generation are domain concepts; Redis is the adapter
 public class QRSessionManager {
 
     private static final DateTimeFormatter TIMESTAMP_FMT =

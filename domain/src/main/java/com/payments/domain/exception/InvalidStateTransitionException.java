@@ -4,6 +4,7 @@ import com.payments.domain.model.TransactionStatus;
 
 import java.util.UUID;
 
+// LEARN: StructuredException — typed context fields (transactionId, from, to) make logs machine-parseable
 public class InvalidStateTransitionException extends RuntimeException {
 
     private final UUID transactionId;

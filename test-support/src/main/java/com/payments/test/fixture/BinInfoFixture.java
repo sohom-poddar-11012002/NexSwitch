@@ -7,6 +7,7 @@ import com.payments.domain.model.PaymentNetwork;
  * Shared BinInfo fixtures aligned with V10 + V12 seed data.
  * BIN prefixes match rows already in bin_table — safe for DB-backed tests.
  */
+// LEARN: TestFixture — rupayNfs() is NFS-eligible; used to test NFS routing divergence from VISA path
 public final class BinInfoFixture {
 
     private BinInfoFixture() {}

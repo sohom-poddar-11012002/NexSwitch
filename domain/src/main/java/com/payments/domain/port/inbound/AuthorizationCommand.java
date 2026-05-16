@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
 
+// LEARN: CommandObject — all inputs for one use case; emvData/pinBlock as byte[] for binary ISO 8583 fields
 public record AuthorizationCommand(
         UUID transactionId,
         MerchantId merchantId,

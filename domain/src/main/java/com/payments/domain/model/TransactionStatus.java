@@ -5,6 +5,7 @@ import java.util.Set;
 
 import static java.util.Map.entry;
 
+// LEARN: StateMachine — VALID_TRANSITIONS Map gives O(1) canTransitionTo; enum keys prevent typos
 public enum TransactionStatus {
     INITIATED,
     AUTHORIZATION_PENDING,

@@ -11,6 +11,7 @@ import java.util.Objects;
 
 import static com.payments.domain.model.PaymentNetwork.*;
 
+// LEARN: FeeWaterfall — MDR → interchange → assessment → acquirer margin; BigDecimal throughout
 public class FeeWaterfallCalculator {
 
     private static final Map<PaymentNetwork, Map<String, BigDecimal>> INTERCHANGE = Map.of(

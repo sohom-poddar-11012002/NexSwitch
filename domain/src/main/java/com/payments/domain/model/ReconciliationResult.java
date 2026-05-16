@@ -1,5 +1,6 @@
 package com.payments.domain.model;
 
+// LEARN: SealedInterface — Completed/Failed; mismatchCount in Completed is the key reconciliation KPI
 public sealed interface ReconciliationResult
         permits ReconciliationResult.Completed,
                 ReconciliationResult.Failed {

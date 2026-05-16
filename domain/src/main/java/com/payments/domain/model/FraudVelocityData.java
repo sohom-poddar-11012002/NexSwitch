@@ -1,5 +1,6 @@
 package com.payments.domain.model;
 
+// LEARN: ValueObject — pre-computed Redis counters; separates data fetch from rule evaluation
 public record FraudVelocityData(
         int panTransactionsLast5Min,
         int panTransactionsLastHour,

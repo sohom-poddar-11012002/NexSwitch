@@ -1,5 +1,6 @@
 package com.payments.domain.model;
 
+// LEARN: ValueObject — immutable record; nfsEligible drives NFS→PRIMARY→SECONDARY routing tier
 public record BinInfo(
     String binPrefix,
     PaymentNetwork network,

@@ -1,5 +1,6 @@
 package com.payments.domain.model.vo;
 
+// LEARN: CorrelationId — STAN links ISO 8583 0100 request to 0110 response; resets to 1 after 999999
 public record SystemTraceAuditNumber(String value) {
 
     private static final int REQUIRED_LENGTH = 6;

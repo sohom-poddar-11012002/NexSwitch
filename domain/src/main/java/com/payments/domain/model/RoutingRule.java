@@ -1,5 +1,6 @@
 package com.payments.domain.model;
 
+// LEARN: ValueObject — BIN prefix matching encapsulated here; matches() keeps routing logic out of RoutingEngine
 public record RoutingRule(String binPrefix, PaymentNetwork network, int priority) {
 
     public RoutingRule {

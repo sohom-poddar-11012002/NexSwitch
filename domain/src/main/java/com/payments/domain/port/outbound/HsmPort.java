@@ -2,6 +2,7 @@ package com.payments.domain.port.outbound;
 
 import com.payments.domain.model.vo.PanHash;
 
+// LEARN: SecurityBoundary — all HSM operations defined here; domain knows operations, not key handles
 public interface HsmPort {
 
     // Step 1 of the DUKPT two-step: derive terminal transaction key from BDK + KSN,

@@ -1,5 +1,6 @@
 package com.payments.domain.model;
 
+// LEARN: SealedInterface — routing decision as value; OnUs/Ibl/Gateway are mutually exclusive tiers
 public sealed interface NetworkRoute
         permits NetworkRoute.OnUs, NetworkRoute.Ibl, NetworkRoute.Gateway {
 

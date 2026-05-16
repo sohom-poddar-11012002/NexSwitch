@@ -6,6 +6,7 @@ import com.payments.domain.model.vo.PanHash;
 import java.time.Instant;
 import java.util.Objects;
 
+// LEARN: ContextObject — aggregates inputs for a service call; avoids long parameter lists
 public record FraudScoringContext(
         PanHash panHash,
         Money amount,
