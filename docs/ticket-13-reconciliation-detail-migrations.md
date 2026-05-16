@@ -35,10 +35,10 @@ docker compose up -d postgres
 docker compose up acquiring-service
 
 # Confirm all 15 migrations applied
-docker compose exec postgres psql -U payments_app -d payments \
+docker compose exec postgres psql -U nexswitch_app -d nexswitch \
   -c "SELECT version, description, success FROM flyway_schema_history ORDER BY installed_rank;"
 
 # Confirm new tables exist
-docker compose exec postgres psql -U payments_app -d payments \
+docker compose exec postgres psql -U nexswitch_app -d nexswitch \
   -c "\dt reconciliation_*; \dt merchant_disputes; \dt payout_instructions;"
 ```

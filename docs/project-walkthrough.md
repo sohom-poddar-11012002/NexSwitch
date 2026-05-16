@@ -1,4 +1,4 @@
-# Payments Platform — Complete Project Walkthrough
+# NexSwitch — Complete Project Walkthrough
 
 > A narrative reference covering the entire system: what it is, how every layer works,
 > why every decision was made, and what gets built post-June. Written for interview prep,

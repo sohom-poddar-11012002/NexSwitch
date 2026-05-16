@@ -21,8 +21,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: payments_test
-          POSTGRES_USER: payments_app
+          POSTGRES_DB: nexswitch_test
+          POSTGRES_USER: nexswitch_app
           POSTGRES_PASSWORD: test_password
         ports: ["5432:5432"]
         options: >-
@@ -147,7 +147,7 @@ jobs:
           for service in acquiring-service payment-switch webhook-dispatcher \
                          notification-service chargeback-service; do
             aws ecs update-service \
-              --cluster payments-platform-dev \
+              --cluster nexswitch-dev \
               --service $service \
               --force-new-deployment \
               --no-cli-pager
@@ -157,7 +157,7 @@ jobs:
         run: |
           for service in acquiring-service payment-switch; do
             aws ecs wait services-stable \
-              --cluster payments-platform-dev \
+              --cluster nexswitch-dev \
               --services $service
           done
 
@@ -187,7 +187,7 @@ jobs:
           for service in acquiring-service payment-switch webhook-dispatcher \
                          notification-service chargeback-service; do
             aws ecs update-service \
-              --cluster payments-platform-qa \
+              --cluster nexswitch-qa \
               --service $service \
               --force-new-deployment \
               --no-cli-pager
@@ -197,7 +197,7 @@ jobs:
         run: |
           for service in acquiring-service payment-switch; do
             aws ecs wait services-stable \
-              --cluster payments-platform-qa \
+              --cluster nexswitch-qa \
               --services $service
           done
 
@@ -227,7 +227,7 @@ jobs:
           for service in acquiring-service payment-switch webhook-dispatcher \
                          notification-service chargeback-service; do
             aws ecs update-service \
-              --cluster payments-platform \
+              --cluster nexswitch \
               --service $service \
               --force-new-deployment \
               --no-cli-pager
@@ -237,6 +237,6 @@ jobs:
         run: |
           for service in acquiring-service payment-switch; do
             aws ecs wait services-stable \
-              --cluster payments-platform \
+              --cluster nexswitch \
               --services $service
           done

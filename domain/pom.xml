@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.payments</groupId>
-        <artifactId>payments-platform</artifactId>
+        <groupId>com.nexswitch</groupId>
+        <artifactId>nexswitch</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
@@ -43,7 +43,7 @@
                             <!-- Only instrument our own classes — prevents JaCoCo from
                                  trying to process JDK-internal classes (class v70) which
                                  JaCoCo 0.8.13 cannot handle under the Java 26 runtime. -->
-                            <includes>com/payments/**</includes>
+                            <includes>com/nexswitch/**</includes>
                         </configuration>
                     </execution>
                     <execution>
@@ -60,7 +60,7 @@
                                 <rule>
                                     <element>PACKAGE</element>
                                     <includes>
-                                        <include>com.payments.domain.*</include>
+                                        <include>com.nexswitch.domain.*</include>
                                     </includes>
                                     <limits>
                                         <limit>

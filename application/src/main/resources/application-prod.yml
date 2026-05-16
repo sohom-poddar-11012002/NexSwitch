@@ -1,6 +1,6 @@
 logging:
   level:
-    com.payments: INFO
+    com.nexswitch: INFO
     root: WARN
 
 spring:

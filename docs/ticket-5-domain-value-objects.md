@@ -1,7 +1,7 @@
 # Ticket #5 — Domain Value Objects
 
 ## What
-Seven self-validating Java 21 record-based value objects in `com.payments.domain.model.vo`
+Seven self-validating Java 21 record-based value objects in `com.nexswitch.domain.model.vo`
 that eliminate primitive obsession across the payments domain.
 
 ## Why
@@ -177,7 +177,7 @@ digits breaks the key format and idempotency silently stops working.
 | `AcquirerReferenceNumberTest` | ✓ | ✓ | ✓ | ✓ | — |
 | `SystemTraceAuditNumberTest` | ✓ | ✓ | ✓ | ✓ | — |
 
-JaCoCo line coverage: all checks passed (≥90% threshold on `com.payments.domain.*`).
+JaCoCo line coverage: all checks passed (≥90% threshold on `com.nexswitch.domain.*`).
 
 ## How to Verify
 

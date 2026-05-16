@@ -29,10 +29,10 @@ from bypassing the 14-entry transition map.
   giving the ops alert and error log enough context without wrapping a separate DTO.
 
 - **ArchUnit Rule 4 scoped to non-test classes** — the rule that domain services may only
-  depend on `com.payments.domain..*` is now scoped with `.haveNameNotMatching(".*Test")`
+  depend on `com.nexswitch.domain..*` is now scoped with `.haveNameNotMatching(".*Test")`
   so test classes in the same package can import AssertJ and JUnit without false violations.
 
-- **`TransactionFixture`** added to `com.payments.domain.fixture` (test scope only) — a
+- **`TransactionFixture`** added to `com.nexswitch.domain.fixture` (test scope only) — a
   single factory for building `Transaction` instances in any status, eliminating builder
   boilerplate across all service-layer tests.
 
