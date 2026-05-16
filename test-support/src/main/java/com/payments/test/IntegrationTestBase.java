@@ -43,10 +43,11 @@ public abstract class IntegrationTestBase {
             .withCommand("redis-server", "--requirepass", "test_password")
             .withReuse(true);
 
+    // LEARN: TC 2.x KafkaContainer defaults to apache/kafka (official ASF image, KRaft-only).
+    //        confluentinc/cp-kafka has different startup log patterns so its wait strategy fails.
     @Container
     static final KafkaContainer KAFKA =
-        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:8.2.0")
-            .asCompatibleSubstituteFor("apache/kafka"))
+        new KafkaContainer(DockerImageName.parse("apache/kafka:latest"))
             .withReuse(true);
 
     @DynamicPropertySource
