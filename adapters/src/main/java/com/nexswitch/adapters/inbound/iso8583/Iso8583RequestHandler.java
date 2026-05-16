@@ -169,11 +169,19 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
         return clean;
     }
 
-    // LEARN: BIN routing — MII (first PAN digit) identifies the network: 4=Visa, 5=Mastercard, 6=RuPay/Discover
+    // LEARN: BIN routing — MII identifies the network family; '3' needs a second digit to split Amex vs Diners.
+    //        Amex: 34xxxx / 37xxxx. Diners: 300–305 / 36xxxx / 38–39xxxx. Both are closed-loop international.
     private PaymentNetwork inferNetwork(String bin6) {
         return switch (bin6.charAt(0)) {
             case '4' -> PaymentNetwork.VISA;
             case '5' -> PaymentNetwork.MASTERCARD;
+            case '3' -> {
+                String prefix2 = bin6.substring(0, 2);
+                yield switch (prefix2) {
+                    case "34", "37" -> PaymentNetwork.AMEX;
+                    default         -> PaymentNetwork.DINERS; // 300–305, 36, 38, 39
+                };
+            }
             default  -> PaymentNetwork.RUPAY;
         };
     }

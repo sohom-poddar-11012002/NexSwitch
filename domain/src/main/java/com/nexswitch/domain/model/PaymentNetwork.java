@@ -4,6 +4,8 @@ package com.nexswitch.domain.model;
 public enum PaymentNetwork {
     VISA,
     MASTERCARD,
+    AMEX,
+    DINERS,
     RUPAY,
     UPI;
 
@@ -12,6 +14,6 @@ public enum PaymentNetwork {
     }
 
     public boolean isInternational() {
-        return this == VISA || this == MASTERCARD;
+        return this == VISA || this == MASTERCARD || this == AMEX || this == DINERS;
     }
 }
