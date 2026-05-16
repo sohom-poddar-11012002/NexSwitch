@@ -1,17 +1,26 @@
 package com.nexswitch.adapters.inbound.iso8583;
 
+import com.nexswitch.domain.model.AuthorizationResult;
+import com.nexswitch.domain.model.PaymentMethod;
+import com.nexswitch.domain.model.PaymentNetwork;
+import com.nexswitch.domain.model.vo.AuthorizationCode;
+import com.nexswitch.domain.port.inbound.AuthorizationCommand;
+import com.nexswitch.domain.port.inbound.ProcessPaymentUseCase;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.packager.GenericPackager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.io.*;
 import java.net.Socket;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,6 +31,13 @@ class Iso8583InboundAdapterTest {
     private static final String TIME_FMT = "HHmmss";
     private static final String DATE_FMT = "MMdd";
 
+    // LEARN: AtomicReference delegate — server is started once (@BeforeAll), but each test can swap
+    //        the use-case behaviour by updating useCaseRef; the proxy lambda captures the reference.
+    private final AtomicReference<ProcessPaymentUseCase> useCaseRef = new AtomicReference<>(
+            cmd -> new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now())
+    );
+    private final ProcessPaymentUseCase proxyUseCase = cmd -> useCaseRef.get().execute(cmd);
+
     private Iso8583TcpServer server;
     private GenericPackager packager;
 
@@ -29,7 +45,7 @@ class Iso8583InboundAdapterTest {
     void startServer() throws Exception {
         Iso8583PackagerFactory factory = new Iso8583PackagerFactory();
         packager = factory.getPackager();
-        Iso8583ChannelInitializer initializer = new Iso8583ChannelInitializer(factory);
+        Iso8583ChannelInitializer initializer = new Iso8583ChannelInitializer(factory, proxyUseCase);
         server = new Iso8583TcpServer(0, initializer); // port 0 → OS picks free port
         server.start();
     }
@@ -37,6 +53,11 @@ class Iso8583InboundAdapterTest {
     @AfterAll
     void stopServer() {
         if (server != null) server.stop();
+    }
+
+    @BeforeEach
+    void resetUseCase() {
+        useCaseRef.set(cmd -> new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now()));
     }
 
     @Test
@@ -59,6 +80,68 @@ class Iso8583InboundAdapterTest {
         assertThat(res.getMTI()).isEqualTo("0110");
         assertThat(res.getString(3)).isEqualTo("000000");
         assertThat(res.getString(4)).isEqualTo("000000060000");
+    }
+
+    @Test
+    void auth0100_declined_returnsDeclineResponseCode() throws Exception {
+        useCaseRef.set(cmd -> new AuthorizationResult.Declined("51", "insufficient funds"));
+
+        ISOMsg res = sendReceive(buildAuthRequest("000010"));
+
+        assertThat(res.getMTI()).isEqualTo("0110");
+        assertThat(res.getString(39)).isEqualTo("51");
+    }
+
+    @Test
+    void auth0100_blocked_returnsFraudCode() throws Exception {
+        useCaseRef.set(cmd -> new AuthorizationResult.Blocked("RULE01"));
+
+        ISOMsg res = sendReceive(buildAuthRequest("000011"));
+
+        assertThat(res.getMTI()).isEqualTo("0110");
+        assertThat(res.getString(39)).isEqualTo("59");
+    }
+
+    @Test
+    void auth0100_switchInoperative_returns91() throws Exception {
+        useCaseRef.set(cmd -> new AuthorizationResult.Unknown("timeout", false));
+
+        ISOMsg res = sendReceive(buildAuthRequest("000012"));
+
+        assertThat(res.getMTI()).isEqualTo("0110");
+        assertThat(res.getString(39)).isEqualTo("91");
+    }
+
+    @Test
+    void auth0100_invalidLuhn_returnsInvalidCardCode() throws Exception {
+        ISOMsg req = buildAuthRequest("000013");
+        req.set(2, "4111111111111112"); // last digit changed — Luhn fails
+
+        ISOMsg res = sendReceive(req);
+
+        assertThat(res.getMTI()).isEqualTo("0110");
+        assertThat(res.getString(39)).isEqualTo("14");
+    }
+
+    @Test
+    void auth0100_commandBuiltWithCorrectFields() throws Exception {
+        AtomicReference<AuthorizationCommand> captured = new AtomicReference<>();
+        useCaseRef.set(cmd -> {
+            captured.set(cmd);
+            return new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now());
+        });
+
+        sendReceive(buildAuthRequest("000020"));
+
+        AuthorizationCommand cmd = captured.get();
+        assertThat(cmd).isNotNull();
+        assertThat(cmd.bin6()).isEqualTo("411111");
+        assertThat(cmd.stan().value()).isEqualTo("000020");
+        assertThat(cmd.terminalId().value()).isEqualTo("TERM0001");
+        assertThat(cmd.merchantId().value()).isEqualTo("MERCHANT000001");
+        assertThat(cmd.amount().amount()).isEqualByComparingTo("600.00");
+        assertThat(cmd.network()).isEqualTo(PaymentNetwork.VISA);
+        assertThat(cmd.paymentMethod()).isEqualTo(PaymentMethod.CARD_CHIP);
     }
 
     @Test
