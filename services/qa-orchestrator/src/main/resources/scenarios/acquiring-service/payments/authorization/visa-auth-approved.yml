@@ -2,7 +2,9 @@ scenario:
   id: visa-auth-approved
   name: "Visa chip+PIN approval"
   description: "Golden path — Visa PAN, valid Luhn, sufficient funds. Expects field39=00."
-  category: happy-path
+  platform: acquiring-service
+  project: payments
+  feature: authorization
   channel: ISO8583
 
   variables:

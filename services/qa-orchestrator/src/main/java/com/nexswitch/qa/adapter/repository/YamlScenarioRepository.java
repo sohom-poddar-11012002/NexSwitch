@@ -54,9 +54,18 @@ public class YamlScenarioRepository implements ScenarioRepository {
     }
 
     @Override
-    public List<TestScenario> findScenariosByCategory(String category) {
+    public List<TestScenario> findScenariosByPlatform(String platform) {
         return scenarios.values().stream()
-                .filter(s -> category.equalsIgnoreCase(s.category()))
+                .filter(s -> platform.equalsIgnoreCase(s.platform()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TestScenario> findScenariosByFeature(String platform, String project, String feature) {
+        return scenarios.values().stream()
+                .filter(s -> platform.equalsIgnoreCase(s.platform())
+                          && project.equalsIgnoreCase(s.project())
+                          && feature.equalsIgnoreCase(s.feature()))
                 .collect(Collectors.toList());
     }
 
@@ -122,7 +131,9 @@ public class YamlScenarioRepository implements ScenarioRepository {
         String id          = (String) s.get("id");
         String name        = (String) s.getOrDefault("name", id);
         String description = (String) s.getOrDefault("description", "");
-        String category    = (String) s.getOrDefault("category", "happy-path");
+        String platform    = (String) s.getOrDefault("platform", "unknown");
+        String project     = (String) s.getOrDefault("project", "unknown");
+        String feature     = (String) s.getOrDefault("feature", "unknown");
         String channelStr  = (String) s.getOrDefault("channel", "ISO8583");
         ChannelType channel = ChannelType.valueOf(channelStr.toUpperCase());
 
@@ -134,8 +145,8 @@ public class YamlScenarioRepository implements ScenarioRepository {
                 .collect(Collectors.toList());
 
         if (id == null || steps.isEmpty()) return Optional.empty();
-        return Optional.of(new TestScenario(id, name, description, category, channel,
-                new HashMap<>(vars), steps, filename, Instant.now()));
+        return Optional.of(new TestScenario(id, name, description, platform, project, feature,
+                channel, new HashMap<>(vars), steps, filename, Instant.now()));
     }
 
     @SuppressWarnings("unchecked")
@@ -147,6 +158,14 @@ public class YamlScenarioRepository implements ScenarioRepository {
         String name = (String) r.getOrDefault("name", id);
         Map<String, Object> runVars = (Map<String, Object>) r.getOrDefault("variables", Map.of());
 
+        // Parse session config
+        Map<String, Object> sessionMap = (Map<String, Object>) r.getOrDefault("session", Map.of());
+        String sessionModeStr = (String) sessionMap.getOrDefault("mode", "STATEFUL");
+        TestRun.SessionMode sessionMode = TestRun.SessionMode.valueOf(sessionModeStr.toUpperCase());
+        List<String> carryVars = (List<String>) sessionMap.getOrDefault("carry_variables", List.of());
+        boolean isolateOnFailure = Boolean.TRUE.equals(sessionMap.getOrDefault("isolate_on_failure", true));
+        TestRun.SessionConfig session = new TestRun.SessionConfig(sessionMode, carryVars, isolateOnFailure);
+
         List<Map<String, Object>> scenarioRefs = (List<Map<String, Object>>) r.getOrDefault("scenarios", List.of());
         List<TestRun.RunScenarioRef> refs = scenarioRefs.stream()
                 .map(ref -> new TestRun.RunScenarioRef(
@@ -155,7 +174,7 @@ public class YamlScenarioRepository implements ScenarioRepository {
                 .collect(Collectors.toList());
 
         if (id == null || refs.isEmpty()) return Optional.empty();
-        return Optional.of(new TestRun(id, name, refs, new HashMap<>(runVars)));
+        return Optional.of(new TestRun(id, name, refs, new HashMap<>(runVars), session));
     }
 
     @SuppressWarnings("unchecked")
@@ -163,16 +182,20 @@ public class YamlScenarioRepository implements ScenarioRepository {
         Map<String, Object> s = (Map<String, Object>) root.get("suite");
         if (s == null) return Optional.empty();
 
-        String id        = (String) s.get("id");
-        String name      = (String) s.getOrDefault("name", id);
+        String id           = (String) s.get("id");
+        String name         = (String) s.getOrDefault("name", id);
         List<String> runIds = (List<String>) s.getOrDefault("run_ids", List.of());
-        String modeStr   = (String) s.getOrDefault("mode", "SEQUENTIAL");
-        int parallelism  = ((Number) s.getOrDefault("parallelism", 1)).intValue();
+        String modeStr      = (String) s.getOrDefault("mode", "SEQUENTIAL");
+        int parallelism     = ((Number) s.getOrDefault("parallelism", 1)).intValue();
         Map<String, String> envProfile = (Map<String, String>) s.getOrDefault("env_profile", Map.of());
+        String onFailureStr = (String) s.getOrDefault("on_failure", "FAIL_FAST");
+        String schedule     = (String) s.get("schedule");
 
         if (id == null || runIds.isEmpty()) return Optional.empty();
         TestSuite.ExecutionMode mode = TestSuite.ExecutionMode.valueOf(modeStr.toUpperCase());
-        return Optional.of(new TestSuite(id, name, runIds, mode, parallelism, new HashMap<>(envProfile)));
+        TestSuite.OnFailure onFailure = TestSuite.OnFailure.valueOf(onFailureStr.toUpperCase());
+        return Optional.of(new TestSuite(id, name, runIds, mode, parallelism,
+                new HashMap<>(envProfile), onFailure, schedule));
     }
 
     @SuppressWarnings("unchecked")
@@ -202,9 +225,9 @@ public class YamlScenarioRepository implements ScenarioRepository {
                 yield new TestStep.WaitForHuman(stepId, instruction, Duration.ofMillis(timeoutMs));
             }
             case "loop" -> {
-                int count          = ((Number) m.getOrDefault("count", 1)).intValue();
-                long delayMs       = ((Number) m.getOrDefault("delay_between_ms", 0)).longValue();
-                boolean parallel   = Boolean.TRUE.equals(m.get("parallel"));
+                int count        = ((Number) m.getOrDefault("count", 1)).intValue();
+                long delayMs     = ((Number) m.getOrDefault("delay_between_ms", 0)).longValue();
+                boolean parallel = Boolean.TRUE.equals(m.get("parallel"));
                 List<Map<String, Object>> innerMaps = (List<Map<String, Object>>) m.getOrDefault("steps", List.of());
                 List<TestStep> inner = innerMaps.stream().map(this::parseStep).filter(Objects::nonNull).collect(Collectors.toList());
                 yield new TestStep.Loop(count, Duration.ofMillis(delayMs), parallel, inner);

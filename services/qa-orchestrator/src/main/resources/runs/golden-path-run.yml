@@ -1,7 +1,11 @@
 run:
   id: golden-path-run
-  name: "Golden path — all happy path scenarios"
-  description: "Runs Visa, RuPay, Mastercard approvals sequentially. Each scenario's captured variables flow to the next."
+  name: "Golden path — authorization happy path"
+  description: "Runs Visa, RuPay, Mastercard approvals sequentially. STATEFUL so captured responses flow forward."
+
+  session:
+    mode: STATEFUL
+    isolate_on_failure: true
 
   variables:
     terminal_id: "TERM0042"

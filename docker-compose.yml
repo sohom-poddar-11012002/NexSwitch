@@ -253,5 +253,38 @@ services:
     ports: ["3002:80"]
     depends_on: [acquiring-service, settlement-service, reconciliation-service]
 
+  # ─── QA Platform ─────────────────────────────────────────────────────────────
+
+  qa-orchestrator:
+    build: services/qa-orchestrator
+    ports: ["8700:8700"]
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
+      DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      QA_ISO8583_HOST: acquiring-service
+      QA_ISO8583_PORT: 8000
+      SPRING_PROFILES_ACTIVE: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      acquiring-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8700/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  frontend-qa-portal:
+    build: frontend/qa-portal
+    ports: ["3003:3003"]
+    environment:
+      QA_ORCHESTRATOR_URL: http://qa-orchestrator:8700
+    depends_on:
+      qa-orchestrator:
+        condition: service_healthy
+
 volumes:
   pgdata:

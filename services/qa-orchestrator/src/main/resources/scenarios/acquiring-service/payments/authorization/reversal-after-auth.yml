@@ -2,7 +2,9 @@ scenario:
   id: reversal-after-auth
   name: "Authorization then reversal"
   description: "Full lifecycle: 0100 approved then 0400 reversal. Both must succeed."
-  category: happy-path
+  platform: acquiring-service
+  project: payments
+  feature: authorization
   channel: ISO8583
 
   variables:

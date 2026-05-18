@@ -1,8 +1,10 @@
 scenario:
   id: replay-attack
   name: "STAN replay attack"
-  description: "Send same STAN twice. First must be approved (00); second must be rejected with field39=94 (duplicate transmission)."
-  category: security
+  description: "Send same STAN twice. First must be approved; second must be rejected with field39=94 (duplicate transmission)."
+  platform: acquiring-service
+  project: payments
+  feature: security
   channel: ISO8583
 
   variables:
@@ -16,7 +18,6 @@ scenario:
       name: replay_stan
       value: "{{$stan}}"
 
-    # First request — must be approved
     - type: send
       channel: ISO8583
       operation: auth_request_0100
@@ -36,7 +37,6 @@ scenario:
       description: "First request must be approved"
       fail_fast: true
 
-    # Replay with same STAN — must be rejected
     - type: send
       channel: ISO8583
       operation: auth_request_0100
