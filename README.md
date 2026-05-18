@@ -451,13 +451,26 @@ ISO 8583 golden path · SoftHSM2 cryptography · dynamic QR · timeout/reversal 
 | Security | Trivy · SonarQube · OWASP Dependency Check · Semgrep · LitmusChaos |
 | Mobile | React Native NFC · watchOS companion · ISO 20022 large-value path |
 
-### Not yet implemented
+### Intentionally mocked — permanent by design
 
-- Live network connections to Visa / Mastercard / NPCI (replaced by WireMock mock-upstream)
-- ML fraud scoring (port defined: `FraudScoringPort`, `FraudScore.mlRiskScore()`)
-- Grafana dashboards (Prometheus metrics are exposed via Actuator)
-- React Native mobile apps and Apple Watch companion
-- ISO 20022 pacs.008 / camt.053 settlement path
+These are not gaps to be closed later. They are replaced by high-fidelity simulators because connecting to the real thing requires institutional licensing that no individual or portfolio project can obtain.
+
+| What | Why it can't be real |
+|---|---|
+| Visa / Mastercard / NPCI live network | Requires Visa/MC **principal membership** — only licensed acquiring banks qualify. Involves $100K+ setup fees, formal PCI DSS Level 1 certification audits, and a network sponsor bank. The `mock-upstream` service (jPOS, ports 8001–8004) is the permanent substitute. |
+| ISO 20022 pacs.008 / camt.053 submission to real banks | Requires a **SWIFT BIC** (assigned exclusively to financial institutions) or RBI RTGS authorisation. The message format itself is fully implemented; it just cannot be fired at a real bank network. |
+| SoftHSM2 in place of a real HSM | A production HSM (Thales Luna, Utimaco) costs ~₹50L and requires a data-centre rack. SoftHSM2 implements the identical PKCS#11 interface — the domain code is indistinguishable. |
+
+This is standard industry practice: Juspay, Pine Labs, and Payswiff all use simulators in their dev/QA environments for the same reason.
+
+### Planned for later milestones (will be built)
+
+| Feature | Milestone |
+|---|---|
+| ML fraud scoring (LangGraph + pgvector + Claude Haiku) | Week 8 |
+| Grafana LGTM dashboards (Prometheus metrics already exposed via Actuator) | v2.0.0 |
+| React Native NFC + Apple Watch companion | Week 11 |
+| gRPC, GraphQL BFF, Debezium CDC, Elasticsearch | v2.0.0 |
 
 ---
 
