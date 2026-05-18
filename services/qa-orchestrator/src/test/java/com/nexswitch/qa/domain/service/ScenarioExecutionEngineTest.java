@@ -1,5 +1,6 @@
 package com.nexswitch.qa.domain.service;
 
+import com.nexswitch.qa.application.AssertionEvaluator;
 import com.nexswitch.qa.domain.model.*;
 import com.nexswitch.qa.domain.port.outbound.ExecutionEventPublisher;
 import com.nexswitch.qa.domain.port.outbound.TestChannelPort;

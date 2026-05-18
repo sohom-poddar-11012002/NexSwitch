@@ -7,6 +7,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 
 @AnalyzeClasses(packages = "com.nexswitch")
 class DomainArchitectureTest {
@@ -76,4 +77,48 @@ class DomainArchitectureTest {
             .should().dependOnClassesThat()
             .resideInAPackage("com.nexswitch.domain.service..")
             .because("Adapters must call inbound use case ports, never domain service implementations directly");
+
+    // Rule 7: QA domain must not import production domain — test infrastructure must stay isolated
+    @ArchTest
+    static final ArchRule qaDomainMustNotImportProductionDomain =
+        noClasses()
+            .that().resideInAPackage("com.nexswitch.qa.domain..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("com.nexswitch.domain..")
+            .because("QA domain is a fully isolated bounded context — coupling to production domain makes tests fragile");
+
+    // Rule 8: QA domain services must have zero Spring dependencies (pure Java like production domain)
+    @ArchTest
+    static final ArchRule qaDomainServicesMustBeSpringFree =
+        noClasses()
+            .that().resideInAPackage("com.nexswitch.qa.domain.service..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage(
+                "org.springframework.beans..",
+                "org.springframework.context..",
+                "jakarta.persistence..",
+                "org.apache.kafka.."
+            )
+            .because("QA domain services are pure Java — same constraint as production domain services");
+
+    // Rule 9: Application-layer @Service beans must not contain business logic inline —
+    //         they must delegate to a domain service or use case. Checked by ensuring they
+    //         do not call repository or adapter methods directly (only through injected ports).
+    @ArchTest
+    static final ArchRule applicationServicesMustNotCallRepositoriesDirectly =
+        noClasses()
+            .that().resideInAPackage("com.nexswitch.app..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage(
+                "com.nexswitch.adapters.outbound..",
+                "jakarta.persistence.."
+            )
+            .because("Application layer wires Spring beans only — business logic and data access belong in domain and adapters respectively");
+
+    // Rule 10: No @Value field injection — @Value must be on constructor parameters only
+    @ArchTest
+    static final ArchRule noValueFieldInjection =
+        noFields()
+            .should().beAnnotatedWith("org.springframework.beans.factory.annotation.Value")
+            .because("@Value on fields bypasses constructor injection and makes beans harder to test — use @Value on constructor parameters instead");
 }
