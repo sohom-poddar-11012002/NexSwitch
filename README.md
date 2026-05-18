@@ -451,26 +451,22 @@ ISO 8583 golden path · SoftHSM2 cryptography · dynamic QR · timeout/reversal 
 | Security | Trivy · SonarQube · OWASP Dependency Check · Semgrep · LitmusChaos |
 | Mobile | React Native NFC · watchOS companion · ISO 20022 large-value path |
 
-### Intentionally mocked — permanent by design
+### Simulated components
 
-These are not gaps to be closed later. They are replaced by high-fidelity simulators because connecting to the real thing requires institutional licensing that no individual or portfolio project can obtain.
+| Component | Simulator | Notes |
+|---|---|---|
+| Visa / Mastercard / NPCI / UPI networks | `mock-upstream` (jPOS, ports 8001–8004) | Implements full MTI 0110 / 0810 response flow |
+| Hardware HSM (Thales Luna / Utimaco) | SoftHSM2 (PKCS#11) | Identical interface; swapped via `hsm.provider` config |
+| ISO 20022 pacs.008 / camt.053 | Internal message builder | Format fully implemented; no live SWIFT/RTGS endpoint |
 
-| What | Why it can't be real |
+### Planned
+
+| Feature | Target |
 |---|---|
-| Visa / Mastercard / NPCI live network | Requires Visa/MC **principal membership** — only licensed acquiring banks qualify. Involves $100K+ setup fees, formal PCI DSS Level 1 certification audits, and a network sponsor bank. The `mock-upstream` service (jPOS, ports 8001–8004) is the permanent substitute. |
-| ISO 20022 pacs.008 / camt.053 submission to real banks | Requires a **SWIFT BIC** (assigned exclusively to financial institutions) or RBI RTGS authorisation. The message format itself is fully implemented; it just cannot be fired at a real bank network. |
-| SoftHSM2 in place of a real HSM | A production HSM (Thales Luna, Utimaco) costs ~₹50L and requires a data-centre rack. SoftHSM2 implements the identical PKCS#11 interface — the domain code is indistinguishable. |
-
-This is standard industry practice: Juspay, Pine Labs, and Payswiff all use simulators in their dev/QA environments for the same reason.
-
-### Planned for later milestones (will be built)
-
-| Feature | Milestone |
-|---|---|
-| ML fraud scoring (LangGraph + pgvector + Claude Haiku) | Week 8 |
-| Grafana LGTM dashboards (Prometheus metrics already exposed via Actuator) | v2.0.0 |
+| ML fraud scoring — LangGraph + pgvector + Claude Haiku | Week 8 |
+| Grafana LGTM observability stack | v2.0.0 |
 | React Native NFC + Apple Watch companion | Week 11 |
-| gRPC, GraphQL BFF, Debezium CDC, Elasticsearch | v2.0.0 |
+| gRPC adapters · GraphQL BFF · Debezium CDC | v2.0.0 |
 
 ---
 
