@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-// Live mutable state of a run in progress. Persisted to qa_run_executions + qa_step_results.
+// LEARN: Immutable run snapshot — each state change (RUNNING→PASSED) creates a new RunExecution
+//        record rather than mutating in place. The repository always overwrites with the latest.
 public record RunExecution(
     UUID id,
     String runId,

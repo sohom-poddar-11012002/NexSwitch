@@ -8,6 +8,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
+// LEARN: @JdbcTypeCode(SqlTypes.JSON) — tells Hibernate to serialize the Map as JSONB in Postgres
+//        without a custom AttributeConverter. Requires hibernate-core 6+ and postgresql driver.
 @Entity
 @Table(name = "qa_run_executions")
 public class RunExecutionEntity {
