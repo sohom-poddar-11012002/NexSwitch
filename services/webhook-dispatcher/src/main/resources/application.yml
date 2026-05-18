@@ -38,7 +38,11 @@ spring:
       isolation-level: read_committed
 
 server:
-  port: 
+  port: 8085
+
+webhook:
+  max-attempts: 5
+  dlq-topic: webhook.dlq
 
 upstream:
   provider: ${UPSTREAM_PROVIDER:wiremock}
