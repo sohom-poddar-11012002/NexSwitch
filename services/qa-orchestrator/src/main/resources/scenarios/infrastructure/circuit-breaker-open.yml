@@ -1,0 +1,59 @@
+scenario:
+  id: circuit-breaker-open
+  name: "Circuit breaker open — field39=91"
+  description: "Force HSM circuit breaker OPEN via Actuator, then trigger auth. Must get field39=91 (switch inoperative). Restore CB after."
+  category: infrastructure
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    actuator_base_url: "http://localhost:8080/actuator"
+
+  steps:
+    # Force HSM circuit breaker open via Spring Boot Actuator
+    - type: send
+      channel: REST
+      operation: "POST /actuator/circuitbreakers/hsm/force-open"
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: cb_open_response
+
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    # Auth should now get field39=91 because HSM CB is open
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "356"
+        pos_entry_mode: "051"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] == '91'"
+      description: "HSM circuit open must return field39=91 (switch inoperative)"
+      fail_fast: true
+
+    # Restore circuit breaker
+    - type: send
+      channel: REST
+      operation: "POST /actuator/circuitbreakers/hsm/reset"
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: cb_reset_response
+
+    - type: wait_for_human
+      step_id: verify-cb-restored
+      instruction: "Verify circuit breaker is back to CLOSED state in Actuator health endpoint. Then click Continue."
+      timeout_ms: 60000

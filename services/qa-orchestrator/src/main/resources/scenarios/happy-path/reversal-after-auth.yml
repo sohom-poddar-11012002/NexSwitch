@@ -1,0 +1,60 @@
+scenario:
+  id: reversal-after-auth
+  name: "Authorization then reversal"
+  description: "Full lifecycle: 0100 approved then 0400 reversal. Both must succeed."
+  category: happy-path
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000300000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "051"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] == '00'"
+      description: "Auth must be approved before reversal"
+      fail_fast: true
+
+    - type: inject_variable
+      name: reversal_stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: reversal_request_0400
+      payload:
+        pan: "{{pan}}"
+        stan: "{{reversal_stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        original_data: "0100{{stan}}0000000000000000000000000000"
+      timeout_ms: 15000
+      capture_response_as: reversal_response
+
+    - type: assert
+      expression: "reversal_response['field39'] == '00'"
+      description: "Reversal must be acknowledged (00)"
+      fail_fast: true

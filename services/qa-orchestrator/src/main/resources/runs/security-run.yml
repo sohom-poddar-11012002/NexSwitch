@@ -1,0 +1,12 @@
+run:
+  id: security-run
+  name: "Security adversarial run"
+  description: "Replay attack, oversized field injection."
+
+  variables:
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+
+  scenarios:
+    - id: replay-attack
+    - id: oversized-field

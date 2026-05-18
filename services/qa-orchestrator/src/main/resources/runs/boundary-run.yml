@@ -1,0 +1,15 @@
+run:
+  id: boundary-run
+  name: "Boundary / negative path run"
+  description: "Invalid Luhn, zero amount, unknown BIN, wrong currency, max amount boundary."
+
+  variables:
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+
+  scenarios:
+    - id: invalid-luhn
+    - id: zero-amount
+    - id: unknown-bin
+    - id: wrong-currency
+    - id: max-amount

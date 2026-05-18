@@ -1,0 +1,37 @@
+scenario:
+  id: invalid-luhn
+  name: "Invalid Luhn PAN rejected"
+  description: "PAN fails Luhn check. Switch must reject with field39=14 (invalid card number)."
+  category: boundary
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436460"     # Luhn invalid — last digit changed from 7 to 0
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "051"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] == '14'"
+      description: "Must be rejected with field39=14 (invalid card number)"
+      fail_fast: true

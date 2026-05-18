@@ -1,0 +1,37 @@
+scenario:
+  id: max-amount
+  name: "Maximum amount boundary"
+  description: "Amount at max 12-digit field boundary (₹99,99,99,999.99). Verify the switch handles without overflow."
+  category: boundary
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "999999999999"    # ₹99,99,99,999.99 — max 12-digit
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "356"
+        pos_entry_mode: "051"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    # Switch must respond — any definitive response (not a crash) is acceptable
+    - type: assert
+      expression: "auth_response['mti'] == '0110'"
+      description: "Must receive a 0110 response (not silence / crash)"
+      fail_fast: true
