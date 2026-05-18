@@ -53,4 +53,11 @@ public class PostgresTransactionRepository implements TransactionRepository {
                 .map(mapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<Transaction> findAuthorizationPendingOlderThan(Instant threshold) {
+        return jpa.findAuthorizationPendingOlderThan(threshold).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }

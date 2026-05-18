@@ -34,4 +34,7 @@ public interface JpaTransactionRepository
 
     @Query("SELECT t FROM TransactionEntity t WHERE t.status = 'CAPTURED' AND t.createdAt >= :since")
     List<TransactionEntity> findCapturedSince(@Param("since") Instant since);
+
+    @Query("SELECT t FROM TransactionEntity t WHERE t.status = 'AUTHORIZATION_PENDING' AND t.createdAt < :threshold")
+    List<TransactionEntity> findAuthorizationPendingOlderThan(@Param("threshold") Instant threshold);
 }
