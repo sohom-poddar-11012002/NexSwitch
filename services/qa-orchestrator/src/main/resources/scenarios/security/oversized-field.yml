@@ -1,0 +1,37 @@
+scenario:
+  id: oversized-field
+  name: "Oversized field injection"
+  description: "merchant_id exceeds 15-char limit. Switch must reject or truncate without crashing."
+  category: security
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"   # 45 chars — well over 15
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "356"
+        pos_entry_mode: "051"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    # Must receive a structured response — not a connection error or NPE
+    - type: assert
+      expression: "auth_response['mti'] == '0110'"
+      description: "Must receive 0110 — oversized field must not crash the switch"
+      fail_fast: true

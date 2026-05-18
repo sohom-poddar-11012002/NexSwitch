@@ -1,0 +1,40 @@
+scenario:
+  id: 50-concurrent-auths-same-card
+  name: "50 concurrent authorizations on same card"
+  description: "Fire 50 parallel 0100 requests on the same PAN. All must receive a deterministic response. Verifies no race condition in idempotency / transaction state machine."
+  category: concurrency
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000010000"    # ₹100 each — low amount to ensure all can approve
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+
+  steps:
+    - type: loop
+      count: 50
+      parallel: true
+      steps:
+        - type: inject_variable
+          name: stan
+          value: "{{$stan}}"
+
+        - type: send
+          channel: ISO8583
+          operation: auth_request_0100
+          payload:
+            pan: "{{pan}}"
+            stan: "{{stan}}"
+            amount_paise: "{{amount_paise}}"
+            terminal_id: "{{terminal_id}}"
+            merchant_id: "{{merchant_id}}"
+            currency: "356"
+            pos_entry_mode: "051"
+          timeout_ms: 15000
+          capture_response_as: "auth_response_{{$loop_index}}"
+
+        - type: assert
+          expression: "auth_response_{{$loop_index}}['mti'] == '0110'"
+          description: "Each concurrent request must receive a 0110 response"
+          fail_fast: false

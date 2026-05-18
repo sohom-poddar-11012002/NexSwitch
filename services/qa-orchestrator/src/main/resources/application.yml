@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: qa-orchestrator
+
+  datasource:
+    url: ${QA_DB_URL:jdbc:postgresql://localhost:5432/nexswitch}
+    username: ${QA_DB_USER:nexswitch}
+    password: ${QA_DB_PASSWORD:nexswitch}
+    hikari:
+      connection-timeout: 3000
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    table: flyway_schema_history_qa    # isolated — does not collide with acquiring-service
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+server:
+  port: 8700
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# QA channel adapter settings
+qa:
+  channel:
+    iso8583:
+      host: ${ISO8583_SWITCH_HOST:localhost}
+      port: ${ISO8583_SWITCH_PORT:8000}
+
+  scenarios:
+    pattern: classpath*:scenarios/**/*.yml
+  runs:
+    pattern: classpath*:runs/**/*.yml
+  suites:
+    pattern: classpath*:suites/**/*.yml
+
+logging:
+  level:
+    com.nexswitch.qa: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

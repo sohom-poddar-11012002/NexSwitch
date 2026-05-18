@@ -1,0 +1,13 @@
+run:
+  id: golden-path-run
+  name: "Golden path — all happy path scenarios"
+  description: "Runs Visa, RuPay, Mastercard approvals sequentially. Each scenario's captured variables flow to the next."
+
+  variables:
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+
+  scenarios:
+    - id: visa-auth-approved
+    - id: rupay-auth-approved
+    - id: mastercard-auth-approved

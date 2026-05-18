@@ -22,6 +22,7 @@
         <module>services/payment-switch</module>
         <module>services/mock-upstream</module>
         <module>services/webhook-dispatcher</module>
+        <module>services/qa-orchestrator</module>
         <module>services/merchant-simulator</module>
         <module>services/settlement-service</module>
         <module>services/reconciliation-service</module>
