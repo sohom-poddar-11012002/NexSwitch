@@ -1,0 +1,49 @@
+scenario:
+  id: pan-in-logs-check
+  name: "PAN in logs — verify full PAN never logged"
+  description: "Trigger an auth then check the actuator log endpoint. Full PAN must not appear — only last 4 digits are permitted. Protects PCI DSS Requirement 3.3."
+  platform: acquiring-service
+  project: payments
+  feature: security
+  channel: MULTI
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+    acquiring_url: "http://localhost:8080"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: send
+      channel: REST
+      operation: "GET /actuator/logfile"
+      payload:
+        url: "{{acquiring_url}}/actuator/logfile"
+      timeout_ms: 5000
+      capture_response_as: log_response
+
+    - type: assert
+      expression: "!log_response['body'].contains('4539148803436467')"
+      description: "Full PAN must never appear in logs (PCI DSS 3.3)"
+      fail_fast: true

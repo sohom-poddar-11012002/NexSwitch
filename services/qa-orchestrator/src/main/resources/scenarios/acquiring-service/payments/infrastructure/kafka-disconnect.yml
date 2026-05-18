@@ -1,0 +1,54 @@
+scenario:
+  id: kafka-disconnect
+  name: "Kafka container paused — auth must succeed without Kafka"
+  description: "Pause Kafka to simulate broker loss. Auth should still return field39=00 — Kafka is on the async event path, not the auth critical path. Events will be buffered or lost but auth must not block."
+  platform: acquiring-service
+  project: payments
+  feature: infrastructure
+  channel: MULTI
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000200000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+
+  steps:
+    - type: send
+      channel: CHAOS
+      operation: docker_pause
+      payload:
+        container: nexswitch-kafka-1
+      timeout_ms: 5000
+
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 20000
+      capture_response_as: auth_response
+
+    - type: send
+      channel: CHAOS
+      operation: docker_unpause
+      payload:
+        container: nexswitch-kafka-1
+      timeout_ms: 5000
+
+    - type: assert
+      expression: "auth_response['field39'] == '00'"
+      description: "Auth must succeed even when Kafka is unavailable"
+      fail_fast: true

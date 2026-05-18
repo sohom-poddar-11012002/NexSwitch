@@ -91,6 +91,22 @@ public class SseEventPublisher implements ExecutionEventPublisher {
         if (list != null) list.completeAll();
     }
 
+    @Override
+    public void publishSuiteStarted(UUID suiteExecutionId, String suiteId) {
+        broadcast(suiteExecutionId, "SUITE_STARTED",
+                Map.of("suiteId", suiteId, "suiteExecutionId", suiteExecutionId.toString()));
+    }
+
+    @Override
+    public void publishSuiteComplete(UUID suiteExecutionId, ExecutionStatus status, int passed, int failed) {
+        String eventType = status == ExecutionStatus.PASSED ? "SUITE_PASSED" : "SUITE_FAILED";
+        broadcast(suiteExecutionId, eventType, Map.of(
+                "status", status.name(), "passed", passed, "failed", failed,
+                "suiteExecutionId", suiteExecutionId.toString()));
+        CopyOnWriteEmitterList list = emitters.remove(suiteExecutionId);
+        if (list != null) list.completeAll();
+    }
+
     private void broadcast(UUID executionId, String eventType, Map<String, Object> data) {
         CopyOnWriteEmitterList list = emitters.get(executionId);
         if (list == null) return;

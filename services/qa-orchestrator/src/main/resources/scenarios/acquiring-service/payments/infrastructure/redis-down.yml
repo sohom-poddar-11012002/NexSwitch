@@ -1,0 +1,54 @@
+scenario:
+  id: redis-down
+  name: "Redis container paused — auth must degrade gracefully"
+  description: "Pause Redis (simulates cache/session store failure). Auth should return field39=91 (issuer unavailable) or 96 (system error), not hang or crash. Redis is unpaused at the end."
+  platform: acquiring-service
+  project: payments
+  feature: infrastructure
+  channel: MULTI
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+
+  steps:
+    - type: send
+      channel: CHAOS
+      operation: docker_pause
+      payload:
+        container: nexswitch-redis-1
+      timeout_ms: 5000
+
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 20000
+      capture_response_as: auth_response
+
+    - type: send
+      channel: CHAOS
+      operation: docker_unpause
+      payload:
+        container: nexswitch-redis-1
+      timeout_ms: 5000
+
+    - type: assert
+      expression: "auth_response['field39'] != null"
+      description: "Must return a response code, not hang"
+      fail_fast: true

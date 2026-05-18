@@ -1,0 +1,38 @@
+scenario:
+  id: seventeen-digit-pan
+  name: "17-digit PAN — exceeds max field length"
+  description: "ISO 8583 field 2 max is 19 digits; 17 digits is valid structurally but Luhn check or issuer routing must reject it with a format error."
+  platform: acquiring-service
+  project: payments
+  feature: boundary
+  channel: ISO8583
+
+  variables:
+    pan: "45391488034364670"
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+      timeout_ms: 10000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] != '00'"
+      description: "17-digit PAN must be rejected (Luhn will fail)"
+      fail_fast: true

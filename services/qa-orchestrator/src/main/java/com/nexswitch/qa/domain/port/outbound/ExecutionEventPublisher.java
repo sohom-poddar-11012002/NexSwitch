@@ -23,4 +23,8 @@ public interface ExecutionEventPublisher {
     void publishScenarioComplete(UUID executionId, String scenarioId, ExecutionStatus status);
 
     void publishRunComplete(UUID executionId, ExecutionStatus finalStatus);
+
+    void publishSuiteStarted(UUID suiteExecutionId, String suiteId);
+
+    void publishSuiteComplete(UUID suiteExecutionId, ExecutionStatus status, int passed, int failed);
 }

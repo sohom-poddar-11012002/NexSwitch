@@ -1,0 +1,58 @@
+scenario:
+  id: postgres-slow
+  name: "Postgres slow — injected delay via WireMock upstream"
+  description: "Inject a 3s fixed delay into mock-upstream responses via WireMock admin API, simulating slow database/upstream. Auth must still return a response within its 15s timeout. Reset WireMock at the end."
+  platform: acquiring-service
+  project: payments
+  feature: infrastructure
+  channel: MULTI
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+    wiremock_url: "http://localhost:8090"
+
+  steps:
+    - type: send
+      channel: CHAOS
+      operation: wiremock_inject
+      payload:
+        wiremock_url: "{{wiremock_url}}"
+        mapping: >
+          {"request":{"method":"ANY","urlPattern":".*"},
+           "response":{"fixedDelayMilliseconds":3000,"status":200}}
+      timeout_ms: 5000
+
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 20000
+      capture_response_as: auth_response
+
+    - type: send
+      channel: CHAOS
+      operation: wiremock_reset
+      payload:
+        wiremock_url: "{{wiremock_url}}"
+      timeout_ms: 5000
+
+    - type: assert
+      expression: "auth_response['field39'] != null"
+      description: "Must return a response within timeout even under upstream delay"
+      fail_fast: true

@@ -1,0 +1,50 @@
+scenario:
+  id: full-lifecycle
+  name: "Full lifecycle — auth approved then Kafka event fired"
+  description: "Visa auth → assert field39=00 → assert AUTHORIZATION_APPROVED event on Kafka within 5s."
+  platform: acquiring-service
+  project: payments
+  feature: authorization
+  channel: MULTI
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000500000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] == '00'"
+      description: "Auth must be approved"
+      fail_fast: true
+
+    - type: send
+      channel: KAFKA_ASSERT
+      operation: assert_kafka_event
+      payload:
+        topic: authorization-events
+        jsonpath: "$.eventType"
+        expected_value: AUTHORIZATION_APPROVED
+      timeout_ms: 5000
+      capture_response_as: kafka_event

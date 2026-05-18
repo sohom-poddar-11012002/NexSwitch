@@ -1,0 +1,15 @@
+run:
+  id: full-lifecycle-run
+  name: "Full lifecycle — auth + Kafka event assertion"
+  description: "Happy-path auth and verifies the AUTHORIZATION_APPROVED Kafka event fires. STATEFUL so auth_response flows into Kafka assertion context."
+
+  session:
+    mode: STATEFUL
+    isolate_on_failure: true
+
+  variables:
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+
+  scenarios:
+    - id: full-lifecycle

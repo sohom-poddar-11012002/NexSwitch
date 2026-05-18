@@ -1,8 +1,11 @@
 package com.nexswitch.qa.application;
 
 import com.nexswitch.qa.adapter.sse.SseEventPublisher;
+import com.nexswitch.qa.domain.port.inbound.TriggerRunUseCase;
 import com.nexswitch.qa.domain.port.outbound.ExecutionEventPublisher;
 import com.nexswitch.qa.domain.port.outbound.ExpressionEvaluator;
+import com.nexswitch.qa.domain.port.outbound.RunExecutionRepository;
+import com.nexswitch.qa.domain.port.outbound.ScenarioRepository;
 import com.nexswitch.qa.domain.port.outbound.TestChannelPort;
 import com.nexswitch.qa.domain.service.ScenarioExecutionEngine;
 import com.nexswitch.qa.domain.service.VariableResolver;
@@ -37,5 +40,14 @@ public class QaOrchestratorConfig {
     @Bean
     public ExecutionEventPublisher executionEventPublisher(SseEventPublisher sseEventPublisher) {
         return sseEventPublisher;
+    }
+
+    @Bean
+    public TriggerSuiteService triggerSuiteService(
+            ScenarioRepository scenarioRepository,
+            TriggerRunUseCase triggerRun,
+            RunExecutionRepository executionRepository,
+            ExecutionEventPublisher eventPublisher) {
+        return new TriggerSuiteService(scenarioRepository, triggerRun, executionRepository, eventPublisher);
     }
 }

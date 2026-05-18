@@ -1,0 +1,17 @@
+run:
+  id: infrastructure-run
+  name: "Infrastructure chaos — redis-down, kafka-disconnect, postgres-slow"
+  description: "Adversarial infrastructure scenarios. STATELESS so a failed chaos inject in one scenario doesn't corrupt the next. Each scenario cleans up its own chaos state."
+
+  session:
+    mode: STATELESS
+    isolate_on_failure: false
+
+  variables:
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+
+  scenarios:
+    - id: redis-down
+    - id: kafka-disconnect
+    - id: postgres-slow
