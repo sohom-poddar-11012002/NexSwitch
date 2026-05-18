@@ -61,6 +61,43 @@ qr:
   session:
     ttl-minutes: 5
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      hsm:
+        # LEARN: slidingWindowType COUNT_BASED uses the last N calls (not time-based) —
+        #        avoids false trips during low-traffic periods where 1 failure = 100%.
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        # slowCallDurationThreshold marks HSM calls >500ms as "slow" — treated as failures
+        slowCallDurationThreshold: 500ms
+        slowCallRateThreshold: 80
+        waitDurationInOpenState: 30s
+        # LEARN: half-open probe — only 3 test calls allowed before circuit decides to
+        #        close or re-open; prevents re-triggering the open state on recovery.
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
+      network:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 20
+        failureRateThreshold: 50
+        slowCallDurationThreshold: 15s
+        slowCallRateThreshold: 50
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
+  bulkhead:
+    instances:
+      hsm:
+        # Max concurrent HSM sessions — HSM hardware has a fixed session pool
+        maxConcurrentCalls: 10
+        maxWaitDuration: 100ms
+      network:
+        # Max concurrent upstream auth calls — protects the Netty thread pool
+        maxConcurrentCalls: 50
+        maxWaitDuration: 500ms
+
 management:
   endpoints:
     web:
