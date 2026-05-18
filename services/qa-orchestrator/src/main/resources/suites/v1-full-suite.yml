@@ -8,5 +8,7 @@ suite:
 
   run_ids:
     - golden-path-run
+    - full-lifecycle-run
     - boundary-run
     - security-run
+    - infrastructure-run

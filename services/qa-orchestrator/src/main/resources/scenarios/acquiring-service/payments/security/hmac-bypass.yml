@@ -1,0 +1,29 @@
+scenario:
+  id: hmac-bypass
+  name: "HMAC bypass — invalid signature on webhook callback"
+  description: "POST to webhook endpoint with tampered HMAC-SHA256 signature. Must return 401 Unauthorized."
+  platform: acquiring-service
+  project: payments
+  feature: security
+  channel: REST
+
+  variables:
+    acquiring_url: "http://localhost:8080"
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "POST /api/webhooks/test"
+      payload:
+        url: "{{acquiring_url}}/api/webhooks/test"
+        headers:
+          Content-Type: application/json
+          X-Webhook-Signature: "sha256=invalidsignature000000000000000000000000000000000000000000000000"
+        body: '{"eventType":"AUTHORIZATION_APPROVED","transactionId":"test-123"}'
+      timeout_ms: 5000
+      capture_response_as: webhook_response
+
+    - type: assert
+      expression: "webhook_response['status'] == 401"
+      description: "Invalid HMAC must return 401 Unauthorized"
+      fail_fast: true

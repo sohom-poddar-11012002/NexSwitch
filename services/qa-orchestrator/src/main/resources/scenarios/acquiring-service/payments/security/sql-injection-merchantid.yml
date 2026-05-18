@@ -1,0 +1,42 @@
+scenario:
+  id: sql-injection-merchantid
+  name: "SQL injection via merchant ID field"
+  description: "Auth with merchant ID containing SQL injection payload. Service must return a payment error code (not 500 or SQL exception). Verifies input sanitisation."
+  platform: acquiring-service
+  project: payments
+  feature: security
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    currency: "356"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "MERCH'; DROP TABLE"
+        currency: "{{currency}}"
+      timeout_ms: 10000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] != null"
+      description: "Must return a field39 response code, not throw an exception"
+      fail_fast: true
+
+    - type: assert
+      expression: "auth_response['mti'] == '0110'"
+      description: "Must respond with 0110 (no server crash)"
+      fail_fast: true

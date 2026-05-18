@@ -1,0 +1,36 @@
+scenario:
+  id: null-pan
+  name: "Null PAN — field 2 absent"
+  description: "Auth request with no PAN in field 2. Expects rejection (field39 != 00)."
+  platform: acquiring-service
+  project: payments
+  feature: boundary
+  channel: ISO8583
+
+  variables:
+    amount_paise: "000000100000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+      timeout_ms: 10000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] != '00'"
+      description: "Must be rejected when PAN is absent"
+      fail_fast: true
