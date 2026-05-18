@@ -2,14 +2,17 @@ package com.nexswitch.app.config;
 
 import com.nexswitch.domain.port.outbound.*;
 import com.nexswitch.domain.service.AuthorizationService;
+import com.nexswitch.domain.service.ReversalService;
 import com.nexswitch.domain.service.TransactionStateMachine;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 // LEARN: @ConditionalOnProperty is the Spring idiom for the Strategy pattern — swap implementations
 //        (mock HSM locally, SoftHSM in staging, real HSM in prod) via a single config property
 //        without touching domain code. The domain port interface stays identical across all envs.
 @Configuration
+@EnableScheduling
 public class AdapterConfig {
 
     // LEARN: CompositionRoot — AuthorizationService is a pure domain class (no @Service annotation)
@@ -37,5 +40,12 @@ public class AdapterConfig {
             transactionRepository,
             new TransactionStateMachine()
         );
+    }
+
+    @Bean
+    public ReversalService reversalService(
+            TransactionRepository transactionRepository,
+            AuthorizationPort authorizationPort) {
+        return new ReversalService(transactionRepository, authorizationPort, new TransactionStateMachine());
     }
 }
