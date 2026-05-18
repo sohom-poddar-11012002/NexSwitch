@@ -49,6 +49,7 @@
         <testcontainers.version>2.0.2</testcontainers.version>
         <wiremock.version>3.13.1</wiremock.version>
         <snakeyaml.version>2.2</snakeyaml.version>
+        <resilience4j.version>2.2.0</resilience4j.version>
 
         <!-- Plugin versions -->
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
@@ -150,6 +151,20 @@
                 <groupId>net.logstash.logback</groupId>
                 <artifactId>logstash-logback-encoder</artifactId>
                 <version>${logstash-encoder.version}</version>
+            </dependency>
+
+            <!-- Resilience4j — circuit breaker, bulkhead, rate limiter -->
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-spring-boot3</artifactId>
+                <version>${resilience4j.version}</version>
+            </dependency>
+
+            <!-- Caffeine — in-process L1 cache for BIN/merchant lookups -->
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>3.1.8</version>
             </dependency>
 
             <!-- WireMock — test doubles for network calls -->

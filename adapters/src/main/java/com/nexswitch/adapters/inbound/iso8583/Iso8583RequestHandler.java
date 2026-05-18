@@ -4,6 +4,7 @@ import com.nexswitch.domain.model.AuthorizationResult;
 import com.nexswitch.domain.model.PaymentMethod;
 import com.nexswitch.domain.model.PaymentNetwork;
 import com.nexswitch.domain.model.vo.*;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import com.nexswitch.domain.port.inbound.AuthorizationCommand;
 import com.nexswitch.domain.port.inbound.ProcessPaymentUseCase;
 import io.netty.channel.ChannelHandler;
@@ -91,7 +92,17 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
                 posEntryMode
         );
 
-        AuthorizationResult result = processPaymentUseCase.execute(command);
+        // LEARN: Load shedding — when the HSM or network circuit is OPEN, Resilience4j throws
+        //        CallNotPermittedException immediately rather than queuing the call behind a broken
+        //        dependency. We catch it here and return "91" (switch inoperative) so the terminal
+        //        can queue the transaction for retry rather than waiting for a 15s timeout.
+        AuthorizationResult result;
+        try {
+            result = processPaymentUseCase.execute(command);
+        } catch (CallNotPermittedException e) {
+            log.warn("iso8583.circuit_open stan={} circuit={}", req.getString(11), e.getCausingCircuitBreakerName());
+            return errorResponse(req, RC_SWITCH_INOP);
+        }
         log.info("iso8583.auth_result stan={} outcome={}", req.getString(11), result.getClass().getSimpleName());
 
         ISOMsg res = new ISOMsg();
