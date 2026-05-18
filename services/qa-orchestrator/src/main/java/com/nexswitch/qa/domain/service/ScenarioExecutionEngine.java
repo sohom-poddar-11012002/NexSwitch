@@ -2,6 +2,7 @@ package com.nexswitch.qa.domain.service;
 
 import com.nexswitch.qa.domain.model.*;
 import com.nexswitch.qa.domain.port.outbound.ExecutionEventPublisher;
+import com.nexswitch.qa.domain.port.outbound.ExpressionEvaluator;
 import com.nexswitch.qa.domain.port.outbound.TestChannelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,13 +25,13 @@ public class ScenarioExecutionEngine {
     private final List<TestChannelPort> channels;
     private final ExecutionEventPublisher eventPublisher;
     private final VariableResolver variableResolver;
-    private final AssertionEvaluator assertionEvaluator;
+    private final ExpressionEvaluator assertionEvaluator;
 
     public ScenarioExecutionEngine(
             List<TestChannelPort> channels,
             ExecutionEventPublisher eventPublisher,
             VariableResolver variableResolver,
-            AssertionEvaluator assertionEvaluator) {
+            ExpressionEvaluator assertionEvaluator) {
         this.channels          = List.copyOf(channels);
         this.eventPublisher    = eventPublisher;
         this.variableResolver  = variableResolver;
@@ -147,7 +148,7 @@ public class ScenarioExecutionEngine {
 
     private StepResult executeAssert(TestStep.Assert step, Map<String, Object> ctx,
                                      String stepId, Instant start) {
-        AssertionEvaluator.EvaluationResult result = assertionEvaluator.evaluate(step.expression(), ctx);
+        ExpressionEvaluator.EvaluationResult result = assertionEvaluator.evaluate(step.expression(), ctx);
         if (result.passed()) {
             return new StepResult.Passed(stepId, elapsed(start), Map.of());
         }

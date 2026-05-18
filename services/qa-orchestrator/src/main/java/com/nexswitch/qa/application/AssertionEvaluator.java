@@ -1,7 +1,8 @@
-package com.nexswitch.qa.domain.service;
+package com.nexswitch.qa.application;
 
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
+import com.nexswitch.qa.domain.port.outbound.ExpressionEvaluator;
 import org.springframework.context.expression.MapAccessor;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
@@ -13,20 +14,17 @@ import java.util.Map;
 
 // LEARN: SpEL (Spring Expression Language) evaluates "auth_response.field39 == '00'" against a
 //        Map-backed context. MapAccessor enables dot-notation property access on Map keys.
-//        JSONPath ($.status) handles JSON-string response bodies.
-//        Both avoid runtime code generation — assertions are data, not compiled classes.
-public class AssertionEvaluator {
+//        Lives in application layer — Spring libs stay out of the pure-Java domain layer.
+public class AssertionEvaluator implements ExpressionEvaluator {
 
     private final ExpressionParser parser = new SpelExpressionParser();
 
-    public record EvaluationResult(boolean passed, String actual, String message) {}
-
+    @Override
     public EvaluationResult evaluate(String expression, Map<String, Object> context) {
         if (expression == null || expression.isBlank()) {
             return new EvaluationResult(false, null, "empty assertion expression");
         }
 
-        // JSONPath expressions start with "$."
         if (expression.trim().startsWith("$.")) {
             return evaluateJsonPath(expression, context);
         }
@@ -58,25 +56,21 @@ public class AssertionEvaluator {
     //        key whose value is the raw JSON; ".field39" is the path within that JSON document.
     private EvaluationResult evaluateJsonPath(String expression, Map<String, Object> context) {
         try {
-            // Simple equality check: "$.key.subkey == 'expected'"
             String[] parts = expression.split("==", 2);
             if (parts.length != 2) {
                 return new EvaluationResult(false, null, "JSONPath assertion must use == operator: " + expression);
             }
             String path     = parts[0].trim();
-            String expected = parts[1].trim().replaceAll("^['\"]|['\"]$", ""); // strip quotes
+            String expected = parts[1].trim().replaceAll("^['\"]|['\"]$", "");
 
-            // Find the JSON string in context — look for the root key of the path
             String[] segments = path.split("\\.");
-            String rootKey = segments[1]; // "$.<rootKey>..."
+            String rootKey = segments[1];
             Object contextVal = context.get(rootKey);
             if (contextVal == null) {
                 return new EvaluationResult(false, null, "context key not found: " + rootKey);
             }
             String json = contextVal instanceof String s ? s : String.valueOf(contextVal);
 
-            // Build path within the JSON document — strip "$.<rootKey>" and keep remaining segments
-            // e.g. "$.auth_response.field39" → read "$.field39" from the auth_response JSON value
             int secondDotIdx = path.indexOf('.', path.indexOf('.') + 1);
             String innerPath = secondDotIdx >= 0 ? "$" + path.substring(secondDotIdx) : "$";
             String actual = JsonPath.read(json, innerPath).toString();

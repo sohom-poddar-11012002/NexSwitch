@@ -2,8 +2,8 @@ package com.nexswitch.qa.application;
 
 import com.nexswitch.qa.adapter.sse.SseEventPublisher;
 import com.nexswitch.qa.domain.port.outbound.ExecutionEventPublisher;
+import com.nexswitch.qa.domain.port.outbound.ExpressionEvaluator;
 import com.nexswitch.qa.domain.port.outbound.TestChannelPort;
-import com.nexswitch.qa.domain.service.AssertionEvaluator;
 import com.nexswitch.qa.domain.service.ScenarioExecutionEngine;
 import com.nexswitch.qa.domain.service.VariableResolver;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +20,7 @@ public class QaOrchestratorConfig {
     }
 
     @Bean
-    public AssertionEvaluator assertionEvaluator() {
+    public ExpressionEvaluator expressionEvaluator() {
         return new AssertionEvaluator();
     }
 
@@ -29,8 +29,8 @@ public class QaOrchestratorConfig {
             List<TestChannelPort> channels,
             ExecutionEventPublisher eventPublisher,
             VariableResolver variableResolver,
-            AssertionEvaluator assertionEvaluator) {
-        return new ScenarioExecutionEngine(channels, eventPublisher, variableResolver, assertionEvaluator);
+            ExpressionEvaluator expressionEvaluator) {
+        return new ScenarioExecutionEngine(channels, eventPublisher, variableResolver, expressionEvaluator);
     }
 
     // SseEventPublisher is @Component but also needs to be the ExecutionEventPublisher bean
