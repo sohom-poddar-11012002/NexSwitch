@@ -1,8 +1,10 @@
 scenario:
   id: circuit-breaker-open
   name: "Circuit breaker open — field39=91"
-  description: "Force HSM circuit breaker OPEN via Actuator, then trigger auth. Must get field39=91 (switch inoperative). Restore CB after."
-  category: infrastructure
+  description: "Force HSM circuit breaker OPEN via Actuator, trigger auth expecting field39=91, then restore."
+  platform: acquiring-service
+  project: payments
+  feature: infrastructure
   channel: ISO8583
 
   variables:
@@ -13,7 +15,6 @@ scenario:
     actuator_base_url: "http://localhost:8080/actuator"
 
   steps:
-    # Force HSM circuit breaker open via Spring Boot Actuator
     - type: send
       channel: REST
       operation: "POST /actuator/circuitbreakers/hsm/force-open"
@@ -25,7 +26,6 @@ scenario:
       name: stan
       value: "{{$stan}}"
 
-    # Auth should now get field39=91 because HSM CB is open
     - type: send
       channel: ISO8583
       operation: auth_request_0100
@@ -45,7 +45,6 @@ scenario:
       description: "HSM circuit open must return field39=91 (switch inoperative)"
       fail_fast: true
 
-    # Restore circuit breaker
     - type: send
       channel: REST
       operation: "POST /actuator/circuitbreakers/hsm/reset"

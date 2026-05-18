@@ -13,7 +13,9 @@ public interface ScenarioRepository {
 
     Optional<TestScenario> findScenarioById(String id);
 
-    List<TestScenario> findScenariosByCategory(String category);
+    List<TestScenario> findScenariosByPlatform(String platform);
+
+    List<TestScenario> findScenariosByFeature(String platform, String project, String feature);
 
     Optional<TestRun> findRunById(String id);
 

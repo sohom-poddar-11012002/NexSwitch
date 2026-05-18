@@ -171,7 +171,8 @@ class ScenarioExecutionEngineTest {
     }
 
     private TestScenario scenario(List<TestStep> steps) {
-        return new TestScenario("test-scenario", "Test Scenario", "", "happy-path",
+        return new TestScenario("test-scenario", "Test Scenario", "",
+                "acquiring-service", "payments", "authorization",
                 ChannelType.ISO8583, Map.of(), steps, "test.yml", Instant.now());
     }
 }

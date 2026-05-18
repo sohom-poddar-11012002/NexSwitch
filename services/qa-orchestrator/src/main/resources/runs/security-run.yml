@@ -1,7 +1,11 @@
 run:
   id: security-run
   name: "Security adversarial run"
-  description: "Replay attack, oversized field injection."
+  description: "Replay attack, oversized field injection. STATELESS — adversarial scenarios must not share state."
+
+  session:
+    mode: STATELESS
+    isolate_on_failure: false
 
   variables:
     terminal_id: "TERM0042"

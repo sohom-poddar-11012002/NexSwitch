@@ -1,17 +1,17 @@
 scenario:
-  id: mastercard-auth-approved
-  name: "Mastercard approval"
-  description: "Mastercard PAN (BIN 52), contactless NFC, ₹1,200. Expects field39=00."
-  category: happy-path
+  id: max-amount
+  name: "Maximum amount boundary"
+  description: "Amount at max 12-digit field boundary (₹99,99,99,999.99). Verify no overflow."
+  platform: acquiring-service
+  project: payments
+  feature: boundary
   channel: ISO8583
 
   variables:
-    pan: "5200828282828210"
-    amount_paise: "000000120000"
+    pan: "4539148803436467"
+    amount_paise: "999999999999"    # ₹99,99,99,999.99 — max 12-digit
     terminal_id: "TERM0042"
     merchant_id: "MERCH0000999"
-    currency: "356"
-    pos_entry_mode: "071"     # Contactless EMV
 
   steps:
     - type: inject_variable
@@ -27,12 +27,12 @@ scenario:
         amount_paise: "{{amount_paise}}"
         terminal_id: "{{terminal_id}}"
         merchant_id: "{{merchant_id}}"
-        currency: "{{currency}}"
-        pos_entry_mode: "{{pos_entry_mode}}"
+        currency: "356"
+        pos_entry_mode: "051"
       timeout_ms: 15000
       capture_response_as: auth_response
 
     - type: assert
-      expression: "auth_response['field39'] == '00'"
-      description: "Mastercard approval — field39 must be 00"
+      expression: "auth_response['mti'] == '0110'"
+      description: "Must receive a 0110 response (not silence / crash)"
       fail_fast: true

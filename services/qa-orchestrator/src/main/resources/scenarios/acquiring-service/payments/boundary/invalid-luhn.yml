@@ -2,7 +2,9 @@ scenario:
   id: invalid-luhn
   name: "Invalid Luhn PAN rejected"
   description: "PAN fails Luhn check. Switch must reject with field39=14 (invalid card number)."
-  category: boundary
+  platform: acquiring-service
+  project: payments
+  feature: boundary
   channel: ISO8583
 
   variables:

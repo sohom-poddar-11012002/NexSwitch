@@ -1,13 +1,15 @@
 scenario:
-  id: zero-amount
-  name: "Zero amount rejected"
-  description: "Amount field=000000000000. Must be rejected — zero-value transactions are not permitted."
-  category: boundary
+  id: unknown-bin
+  name: "Unknown BIN rejected"
+  description: "PAN BIN not in routing table. Switch must reject with field39=57 or 96."
+  platform: acquiring-service
+  project: payments
+  feature: boundary
   channel: ISO8583
 
   variables:
-    pan: "4539148803436467"
-    amount_paise: "000000000000"
+    pan: "9999999999999995"    # BIN 999999 — not registered; Luhn-valid
+    amount_paise: "000000100000"
     terminal_id: "TERM0042"
     merchant_id: "MERCH0000999"
 
@@ -32,5 +34,5 @@ scenario:
 
     - type: assert
       expression: "auth_response['field39'] != '00'"
-      description: "Zero amount must not be approved"
+      description: "Unknown BIN must not be approved"
       fail_fast: true

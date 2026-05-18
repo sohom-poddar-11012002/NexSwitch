@@ -20,8 +20,14 @@ public class ScenarioController {
     }
 
     @GetMapping("/scenarios")
-    public List<TestScenario> listScenarios(@RequestParam(required = false) String category) {
-        if (category != null) return scenarioRepository.findScenariosByCategory(category);
+    public List<TestScenario> listScenarios(
+            @RequestParam(required = false) String platform,
+            @RequestParam(required = false) String project,
+            @RequestParam(required = false) String feature) {
+        if (platform != null && project != null && feature != null)
+            return scenarioRepository.findScenariosByFeature(platform, project, feature);
+        if (platform != null)
+            return scenarioRepository.findScenariosByPlatform(platform);
         return scenarioRepository.findAllScenarios();
     }
 

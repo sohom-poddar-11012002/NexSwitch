@@ -2,7 +2,9 @@ scenario:
   id: oversized-field
   name: "Oversized field injection"
   description: "merchant_id exceeds 15-char limit. Switch must reject or truncate without crashing."
-  category: security
+  platform: acquiring-service
+  project: payments
+  feature: security
   channel: ISO8583
 
   variables:
@@ -30,7 +32,6 @@ scenario:
       timeout_ms: 15000
       capture_response_as: auth_response
 
-    # Must receive a structured response — not a connection error or NPE
     - type: assert
       expression: "auth_response['mti'] == '0110'"
       description: "Must receive 0110 — oversized field must not crash the switch"

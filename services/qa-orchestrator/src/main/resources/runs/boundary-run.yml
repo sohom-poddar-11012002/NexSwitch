@@ -1,7 +1,11 @@
 run:
   id: boundary-run
-  name: "Boundary / negative path run"
-  description: "Invalid Luhn, zero amount, unknown BIN, wrong currency, max amount boundary."
+  name: "Boundary — rejection cases"
+  description: "Invalid Luhn, zero amount, unknown BIN, wrong currency, max amount. STATELESS — each scenario isolated."
+
+  session:
+    mode: STATELESS
+    isolate_on_failure: false
 
   variables:
     terminal_id: "TERM0042"

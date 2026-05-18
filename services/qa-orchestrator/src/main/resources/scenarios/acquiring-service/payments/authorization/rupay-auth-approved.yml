@@ -1,16 +1,19 @@
 scenario:
-  id: wrong-currency
-  name: "Unsupported currency rejected"
-  description: "Currency code 840 (USD) on an INR-only acquirer. Must be rejected."
-  category: boundary
+  id: rupay-auth-approved
+  name: "RuPay domestic approval"
+  description: "RuPay PAN (BIN 60), chip+PIN, ₹500. Expects field39=00."
+  platform: acquiring-service
+  project: payments
+  feature: authorization
   channel: ISO8583
 
   variables:
-    pan: "4539148803436467"
-    amount_paise: "000000100000"
+    pan: "6074829000000003"
+    amount_paise: "000000050000"
     terminal_id: "TERM0042"
     merchant_id: "MERCH0000999"
-    currency: "840"    # USD
+    currency: "356"
+    pos_entry_mode: "051"
 
   steps:
     - type: inject_variable
@@ -27,11 +30,11 @@ scenario:
         terminal_id: "{{terminal_id}}"
         merchant_id: "{{merchant_id}}"
         currency: "{{currency}}"
-        pos_entry_mode: "051"
+        pos_entry_mode: "{{pos_entry_mode}}"
       timeout_ms: 15000
       capture_response_as: auth_response
 
     - type: assert
-      expression: "auth_response['field39'] != '00'"
-      description: "USD currency on INR acquirer must be rejected"
+      expression: "auth_response['field39'] == '00'"
+      description: "RuPay approval — field39 must be 00"
       fail_fast: true

@@ -1,17 +1,19 @@
 scenario:
-  id: rupay-auth-approved
-  name: "RuPay domestic approval"
-  description: "RuPay PAN (BIN 60), chip+PIN, ₹500. Expects field39=00."
-  category: happy-path
+  id: mastercard-auth-approved
+  name: "Mastercard approval"
+  description: "Mastercard PAN (BIN 52), contactless NFC, ₹1,200. Expects field39=00."
+  platform: acquiring-service
+  project: payments
+  feature: authorization
   channel: ISO8583
 
   variables:
-    pan: "6074829000000003"
-    amount_paise: "000000050000"
+    pan: "5200828282828210"
+    amount_paise: "000000120000"
     terminal_id: "TERM0042"
     merchant_id: "MERCH0000999"
     currency: "356"
-    pos_entry_mode: "051"
+    pos_entry_mode: "071"     # Contactless EMV
 
   steps:
     - type: inject_variable
@@ -34,5 +36,5 @@ scenario:
 
     - type: assert
       expression: "auth_response['field39'] == '00'"
-      description: "RuPay approval — field39 must be 00"
+      description: "Mastercard approval — field39 must be 00"
       fail_fast: true

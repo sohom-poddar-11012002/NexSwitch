@@ -1,9 +1,10 @@
 suite:
   id: v1-full-suite
   name: "v1 full regression suite"
-  description: "All Phase 1+2 runs — golden path, boundary, security. Run before every deployment."
+  description: "Golden path, boundary, security. Run before every deployment."
   mode: SEQUENTIAL
   parallelism: 1
+  on_failure: FAIL_FAST
 
   run_ids:
     - golden-path-run

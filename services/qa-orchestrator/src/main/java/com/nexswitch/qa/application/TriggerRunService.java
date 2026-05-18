@@ -64,6 +64,8 @@ public class TriggerRunService implements TriggerRunUseCase {
 
         List<RunExecution.ScenarioExecution> scenarioResults = new ArrayList<>();
         boolean runPassed = true;
+        TestRun.SessionConfig session = run.session();
+        boolean sessionPoisoned = false; // set when isolate_on_failure=true and a scenario fails
 
         for (TestRun.RunScenarioRef ref : run.scenarios()) {
             Optional<TestScenario> scenarioOpt = scenarioRepository.findScenarioById(ref.scenarioId());
@@ -73,17 +75,32 @@ public class TriggerRunService implements TriggerRunUseCase {
                 break;
             }
             TestScenario scenario = scenarioOpt.get();
-            // Merge run-level context + per-scenario overrides
-            Map<String, Object> scenarioCtx = new HashMap<>(sharedContext);
+
+            // LEARN: STATELESS resets to run-level baseline each scenario — no cross-scenario
+            //        state leaks. STATEFUL accumulates captured variables (e.g. auth token from
+            //        scenario 1 flows into scenario 2). isolate_on_failure stops carry-over
+            //        after a failure so broken state doesn't corrupt downstream assertions.
+            Map<String, Object> scenarioCtx = session.mode() == TestRun.SessionMode.STATELESS || sessionPoisoned
+                    ? new HashMap<>(run.runVariables())
+                    : new HashMap<>(sharedContext);
             scenarioCtx.putAll(ref.variableOverrides());
 
             RunExecution.ScenarioExecution result = engine.executeScenario(scenario, scenarioCtx, executionId);
             scenarioResults.add(result);
-            // Propagate any captured variables into the shared context for the next scenario
-            sharedContext.putAll(scenarioCtx);
+
+            if (session.mode() == TestRun.SessionMode.STATEFUL && !sessionPoisoned) {
+                if (session.carryVariables().isEmpty()) {
+                    sharedContext.putAll(scenarioCtx);
+                } else {
+                    session.carryVariables().forEach(key -> {
+                        if (scenarioCtx.containsKey(key)) sharedContext.put(key, scenarioCtx.get(key));
+                    });
+                }
+            }
 
             if (result.status() != ExecutionStatus.PASSED) {
                 runPassed = false;
+                if (session.isolateOnFailure()) sessionPoisoned = true;
                 break;
             }
         }

@@ -1,13 +1,15 @@
 scenario:
   id: 50-concurrent-auths-same-card
   name: "50 concurrent authorizations on same card"
-  description: "Fire 50 parallel 0100 requests on the same PAN. All must receive a deterministic response. Verifies no race condition in idempotency / transaction state machine."
-  category: concurrency
+  description: "Fire 50 parallel 0100 requests on the same PAN. All must receive a deterministic response."
+  platform: acquiring-service
+  project: payments
+  feature: concurrency
   channel: ISO8583
 
   variables:
     pan: "4539148803436467"
-    amount_paise: "000000010000"    # ₹100 each — low amount to ensure all can approve
+    amount_paise: "000000010000"    # ₹100 each
     terminal_id: "TERM0042"
     merchant_id: "MERCH0000999"
 
