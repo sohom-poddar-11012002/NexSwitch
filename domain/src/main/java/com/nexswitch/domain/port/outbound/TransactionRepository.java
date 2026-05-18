@@ -16,4 +16,6 @@ public interface TransactionRepository {
     Optional<Transaction> findByArn(AcquirerReferenceNumber arn);
     List<Transaction> findByStatus(TransactionStatus status);
     List<Transaction> findCapturedSince(Instant since);
+    // LEARN: DerivedQuery — callers pass a threshold Instant; the port stays pure, no Duration logic here
+    List<Transaction> findAuthorizationPendingOlderThan(Instant threshold);
 }
