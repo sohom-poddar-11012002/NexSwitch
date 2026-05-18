@@ -108,3 +108,76 @@ export async function resumeStep(executionId: string, stepId: string, outcome: "
     body: JSON.stringify({ outcome }),
   });
 }
+
+export async function fetchSuites(): Promise<TestSuite[]> {
+  const res = await fetch(`${BASE}/suites`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /suites failed: ${res.status}`);
+  return res.json();
+}
+
+export async function triggerSuite(
+  suiteId: string,
+  variableOverrides: Record<string, string> = {}
+): Promise<{ suiteExecutionId: string }> {
+  const res = await fetch(`${BASE}/suites/trigger`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ suiteId, variableOverrides }),
+  });
+  if (!res.ok) throw new Error(`POST /suites/trigger failed: ${res.status}`);
+  return res.json();
+}
+
+export interface ProxyStatus {
+  running: boolean;
+  recordingCount?: number;
+  enabled?: boolean;
+}
+
+export interface Recording {
+  filename: string;
+  sizeBytes: number;
+}
+
+export async function getProxyStatus(): Promise<ProxyStatus> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/proxy/status`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return { running: false };
+  return res.json();
+}
+
+export async function startProxy(): Promise<ProxyStatus> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/proxy/start`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`POST /recorder/proxy/start failed: ${res.status}`);
+  return res.json();
+}
+
+export async function stopProxy(): Promise<void> {
+  await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/proxy/stop`, { method: "POST" });
+}
+
+export async function fetchRecordings(): Promise<Recording[]> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/recordings`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function importHar(
+  file: File,
+  scenarioId?: string
+): Promise<{ scenarioId: string; yaml: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  if (scenarioId) form.append("scenarioId", scenarioId);
+  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/import-har`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw new Error(`POST /recorder/import-har failed: ${res.status}`);
+  return res.json();
+}

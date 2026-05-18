@@ -11,10 +11,12 @@ import com.nexswitch.qa.domain.service.ScenarioExecutionEngine;
 import com.nexswitch.qa.domain.service.VariableResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.List;
 
 @Configuration
+@EnableScheduling
 public class QaOrchestratorConfig {
 
     @Bean

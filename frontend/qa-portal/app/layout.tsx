@@ -16,6 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/scenarios" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Scenarios</Link>
           <Link href="/runs" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Runs</Link>
           <Link href="/reports" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Reports</Link>
+          <Link href="/suites" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Suites</Link>
+          <Link href="/recorder" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Recorder</Link>
         </nav>
         <main className="flex-1 p-6">{children}</main>
       </body>

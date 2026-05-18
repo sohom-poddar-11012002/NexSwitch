@@ -50,10 +50,19 @@ qa:
 
   scenarios:
     pattern: classpath*:scenarios/**/*.yml
+    recorded-dir: ${QA_RECORDED_DIR:recorded}
   runs:
     pattern: classpath*:runs/**/*.yml
   suites:
     pattern: classpath*:suites/**/*.yml
+
+  recorder:
+    proxy:
+      enabled: ${QA_RECORDER_ENABLED:false}
+      port: ${QA_RECORDER_PORT:8001}
+
+  notifications:
+    # webhook-url: ${QA_NOTIFY_WEBHOOK_URL:}  # set to enable Slack/webhook failure alerts
 
 logging:
   level:
