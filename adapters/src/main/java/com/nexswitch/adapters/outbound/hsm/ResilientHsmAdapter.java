@@ -22,7 +22,10 @@ public class ResilientHsmAdapter implements HsmPort {
 
     private final HsmPort delegate;
 
-    public ResilientHsmAdapter(@Qualifier("mockHsmAdapter") HsmPort delegate) {
+    // LEARN: Delegate injected by "hsmDelegate" — AdapterConfig declares a @ConditionalOnProperty
+    //        @Bean with that name, selecting either SoftHsm2HsmAdapter or MockHsmAdapter at startup.
+    //        This wrapper adds circuit-breaker + bulkhead on top of whichever impl is active.
+    public ResilientHsmAdapter(@Qualifier("hsmDelegate") HsmPort delegate) {
         this.delegate = delegate;
     }
 

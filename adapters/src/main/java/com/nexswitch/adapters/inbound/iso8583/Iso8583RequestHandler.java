@@ -77,6 +77,8 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
         SystemTraceAuditNumber stan = SystemTraceAuditNumber.of(req.getString(11));
         String posEntryMode = req.getString(22) != null ? req.getString(22) : "000";
 
+        // LEARN: Field 53 (Key Management Data) carries the 10-byte KSN for DUKPT-encrypted PIN blocks.
+        //        Absent on contactless/QR flows where no PIN entry occurs at the terminal.
         AuthorizationCommand command = new AuthorizationCommand(
                 UUID.randomUUID(),
                 merchantId,
@@ -89,6 +91,7 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
                 stan,
                 req.getBytes(55),
                 req.getBytes(52),
+                req.getBytes(53),
                 posEntryMode
         );
 

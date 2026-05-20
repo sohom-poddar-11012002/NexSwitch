@@ -2,8 +2,8 @@ package com.nexswitch.qa.rest;
 
 import com.nexswitch.qa.domain.model.TestRun;
 import com.nexswitch.qa.domain.model.TestScenario;
-import com.nexswitch.qa.domain.model.TestSuite;
 import com.nexswitch.qa.domain.port.outbound.ScenarioRepository;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,21 +38,23 @@ public class ScenarioController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/runs")
-    public List<TestRun> listRuns() {
-        return scenarioRepository.findAllRuns();
-    }
-
-    @GetMapping("/runs/{id}/definition")
-    public ResponseEntity<TestRun> getRun(@PathVariable String id) {
-        return scenarioRepository.findRunById(id)
+    @GetMapping(value = "/scenarios/{id}/yaml", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> getScenarioYaml(@PathVariable String id) {
+        return scenarioRepository.findScenarioYaml(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/suites")
-    public List<TestSuite> listSuites() {
-        return scenarioRepository.findAllSuites();
+    @GetMapping("/run-definitions")
+    public List<TestRun> listRuns() {
+        return scenarioRepository.findAllRuns();
+    }
+
+    @GetMapping("/run-definitions/{id}")
+    public ResponseEntity<TestRun> getRun(@PathVariable String id) {
+        return scenarioRepository.findRunById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/reload")

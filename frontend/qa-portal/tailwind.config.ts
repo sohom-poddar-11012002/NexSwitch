@@ -5,11 +5,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        brand: { DEFAULT: "#6366f1", dark: "#4f46e5" },
-        pass: "#22c55e",
-        fail: "#ef4444",
-        waiting: "#f59e0b",
-        skipped: "#94a3b8",
+        bg:       "var(--bg)",
+        surface:  "var(--surface)",
+        surface2: "var(--surface-2)",
+        border:   "var(--border)",
+        text:     "var(--text)",
+        muted:    "var(--muted)",
+        brand:  { DEFAULT: "#6366f1", dark: "#4f46e5" },
+        pass:   "#22c55e",
+        fail:   "#ef4444",
+        waiting:"#f59e0b",
       },
     },
   },
