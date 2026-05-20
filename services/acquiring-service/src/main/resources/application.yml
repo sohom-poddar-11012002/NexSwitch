@@ -53,6 +53,13 @@ upstream:
 
 hsm:
   provider: ${HSM_PROVIDER:mock}
+  pkcs11:
+    library: ${HSM_LIBRARY:/usr/lib/softhsm/libsofthsm2.so}
+    slot: ${HSM_SLOT:0}
+    pin: ${HSM_PIN:1234}
+    bdk-alias: payments-bdk
+    zpk-alias: payments-zpk
+    mak-alias: payments-mak
 
 storage:
   provider: ${STORAGE_PROVIDER:local}

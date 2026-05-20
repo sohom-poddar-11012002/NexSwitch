@@ -256,6 +256,7 @@ class AuthorizationServiceTest {
                 SystemTraceAuditNumber.of("000042"),
                 null,
                 null,
+                null,   // ksn: null for non-PIN flows
                 "05"
         );
     }
@@ -273,6 +274,7 @@ class AuthorizationServiceTest {
                 SystemTraceAuditNumber.of("000042"),
                 new byte[]{0x01, 0x02},
                 new byte[]{0x03, 0x04},
+                null,   // ksn: null (EMV without PIN in test)
                 "05"
         );
     }

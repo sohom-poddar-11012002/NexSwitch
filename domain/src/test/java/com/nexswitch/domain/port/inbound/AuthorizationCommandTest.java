@@ -26,6 +26,7 @@ class AuthorizationCommandTest {
                 SystemTraceAuditNumber.of("000042"),
                 new byte[]{0x01},
                 new byte[]{0x02},
+                null,   // ksn: null for non-PIN flows
                 "07"
         );
     }
@@ -49,6 +50,7 @@ class AuthorizationCommandTest {
                 SystemTraceAuditNumber.of("000042"),
                 new byte[]{0x01},
                 new byte[]{0x02},
+                null,
                 "07"
         )).isInstanceOf(NullPointerException.class);
     }
@@ -67,6 +69,7 @@ class AuthorizationCommandTest {
                 SystemTraceAuditNumber.of("000042"),
                 new byte[]{0x01},
                 new byte[]{0x02},
+                null,
                 "07"
         )).isInstanceOf(NullPointerException.class);
     }
@@ -85,6 +88,7 @@ class AuthorizationCommandTest {
                 SystemTraceAuditNumber.of("000042"),
                 new byte[]{0x01},
                 new byte[]{0x02},
+                null,
                 "07"
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("amount must be positive");
@@ -104,6 +108,7 @@ class AuthorizationCommandTest {
                 SystemTraceAuditNumber.of("000042"),
                 new byte[]{0x01},
                 new byte[]{0x02},
+                null,
                 "07"
         )).isInstanceOf(IllegalArgumentException.class);
     }
