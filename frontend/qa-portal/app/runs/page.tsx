@@ -10,48 +10,71 @@ export default async function RunsPage() {
   try { executions = await fetchExecutions(); } catch { /* no executions yet */ }
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-xl font-semibold mb-6">Runs</h1>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">Runs</h1>
+        <p className="text-sm text-[var(--muted)] mt-1">Trigger a test run and monitor its live execution.</p>
+      </div>
 
-      <section className="mb-8">
-        <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">Trigger a Run</h2>
-        <RunTriggerForm runs={runs} />
-      </section>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="lg:col-span-2">
+          <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-widest mb-3">Trigger</p>
+          <RunTriggerForm runs={runs} />
+        </div>
 
-      <section>
-        <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">Recent Executions</h2>
-        {executions.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">No executions yet.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {executions.map((e) => (
-              <Link
-                key={e.id}
-                href={`/live/${e.id}`}
-                data-testid="execution-row"
-                className="flex items-center justify-between p-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:border-brand transition-colors"
-              >
-                <div>
-                  <span className="text-sm font-mono">{e.runId}</span>
-                  <span className="ml-3 text-xs text-[var(--muted)]">{e.id.slice(0, 8)}</span>
-                </div>
-                <StatusBadge status={e.status} />
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+        <div className="lg:col-span-3">
+          <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-widest mb-3">
+            Recent Executions
+            {executions.length > 0 && (
+              <span className="ml-2 normal-case font-normal">{executions.length} total</span>
+            )}
+          </p>
+          {executions.length === 0 ? (
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+              <p className="text-sm text-[var(--muted)]">No executions yet. Trigger a run to get started.</p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+              {executions.map((e, i) => (
+                <Link
+                  key={e.id}
+                  href={`/live/${e.id}`}
+                  data-testid="execution-row"
+                  className={`flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-2)] transition-colors ${
+                    i < executions.length - 1 ? "border-b border-[var(--border)]" : ""
+                  }`}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-[var(--text)]">{e.runId}</span>
+                    <span className="text-[11px] text-[var(--muted)] font-mono">{e.id.slice(0, 8)}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-[var(--muted)]">
+                      {new Date(e.startedAt).toLocaleTimeString()}
+                    </span>
+                    <StatusBadge status={e.status} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    PASSED: "text-pass",
-    FAILED: "text-fail",
-    RUNNING: "text-waiting animate-pulse",
-    PENDING: "text-[var(--muted)]",
-    CANCELLED: "text-[var(--muted)]",
+  const styles: Record<string, string> = {
+    PASSED:    "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    FAILED:    "bg-red-500/10 text-red-400 border-red-500/20",
+    RUNNING:   "bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse",
+    PENDING:   "bg-zinc-700/50 text-zinc-400 border-zinc-700",
+    CANCELLED: "bg-zinc-700/50 text-zinc-400 border-zinc-700",
   };
-  return <span className={`text-xs font-mono ${map[status] ?? "text-[var(--muted)]"}`}>{status}</span>;
+  return (
+    <span className={`text-[11px] px-2 py-0.5 rounded border font-mono ${styles[status] ?? "bg-zinc-700/50 text-zinc-400 border-zinc-700"}`}>
+      {status}
+    </span>
+  );
 }

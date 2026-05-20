@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Link from "next/link";
+import Sidebar from "@/app/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "QA Portal — NexSwitch",
@@ -10,16 +10,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col">
-        <nav className="flex items-center gap-6 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface)]">
-          <span className="font-bold text-brand tracking-tight">NexSwitch QA</span>
-          <Link href="/scenarios" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Scenarios</Link>
-          <Link href="/runs" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Runs</Link>
-          <Link href="/reports" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Reports</Link>
-          <Link href="/suites" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Suites</Link>
-          <Link href="/recorder" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">Recorder</Link>
-        </nav>
-        <main className="flex-1 p-6">{children}</main>
+      <body className="min-h-screen bg-[var(--bg)]">
+        <Sidebar />
+        <main className="pl-[220px] min-h-screen">
+          <div className="max-w-5xl mx-auto p-8">
+            {children}
+          </div>
+        </main>
       </body>
     </html>
   );

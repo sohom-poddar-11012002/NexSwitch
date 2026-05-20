@@ -12,6 +12,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -25,9 +26,10 @@ public class YamlScenarioRepository implements ScenarioRepository {
 
     private static final Logger log = LoggerFactory.getLogger(YamlScenarioRepository.class);
 
-    private final Map<String, TestScenario> scenarios = new ConcurrentHashMap<>();
-    private final Map<String, TestRun>      runs      = new ConcurrentHashMap<>();
-    private final Map<String, TestSuite>    suites    = new ConcurrentHashMap<>();
+    private final Map<String, TestScenario> scenarios    = new ConcurrentHashMap<>();
+    private final Map<String, String>       scenarioYaml = new ConcurrentHashMap<>();
+    private final Map<String, TestRun>      runs         = new ConcurrentHashMap<>();
+    private final Map<String, TestSuite>    suites       = new ConcurrentHashMap<>();
 
     private final String scenarioPattern;
     private final String runPattern;
@@ -90,8 +92,14 @@ public class YamlScenarioRepository implements ScenarioRepository {
     }
 
     @Override
+    public Optional<String> findScenarioYaml(String id) {
+        return Optional.ofNullable(scenarioYaml.get(id));
+    }
+
+    @Override
     public void reload() {
         scenarios.clear();
+        scenarioYaml.clear();
         runs.clear();
         suites.clear();
         loadResources(scenarioPattern, "scenario");
@@ -107,12 +115,16 @@ public class YamlScenarioRepository implements ScenarioRepository {
             Resource[] resources = resolver.getResources(pattern);
             for (Resource resource : resources) {
                 try (InputStream in = resource.getInputStream()) {
-                    Map<String, Object> root = new Yaml().load(in);
+                    String raw = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                    Map<String, Object> root = new Yaml().load(raw);
                     if (root == null) continue;
                     switch (type) {
-                        case "scenario" -> parseScenario(root, resource.getFilename()).ifPresent(s -> scenarios.put(s.id(), s));
-                        case "run"      -> parseRun(root).ifPresent(r -> runs.put(r.id(), r));
-                        case "suite"    -> parseSuite(root).ifPresent(s -> suites.put(s.id(), s));
+                        case "scenario" -> parseScenario(root, resource.getFilename()).ifPresent(s -> {
+                            scenarios.put(s.id(), s);
+                            scenarioYaml.put(s.id(), raw);
+                        });
+                        case "run"   -> parseRun(root).ifPresent(r -> runs.put(r.id(), r));
+                        case "suite" -> parseSuite(root).ifPresent(s -> suites.put(s.id(), s));
                     }
                 } catch (Exception e) {
                     log.warn("qa.yaml.parse_failed file={} type={} error={}", resource.getFilename(), type, e.getMessage());

@@ -1,7 +1,8 @@
 package com.nexswitch.qa.application;
 
-import com.nexswitch.qa.adapter.sse.SseEventPublisher;
 import com.nexswitch.qa.domain.port.inbound.TriggerRunUseCase;
+import com.nexswitch.qa.domain.port.outbound.NotificationPort;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import com.nexswitch.qa.domain.port.outbound.ExecutionEventPublisher;
 import com.nexswitch.qa.domain.port.outbound.ExpressionEvaluator;
 import com.nexswitch.qa.domain.port.outbound.RunExecutionRepository;
@@ -12,12 +13,24 @@ import com.nexswitch.qa.domain.service.VariableResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
 @Configuration
 @EnableScheduling
 public class QaOrchestratorConfig {
+
+    @Bean
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(NotificationPort.class)
+    public NotificationPort noopNotificationAdapter() {
+        return new NoopNotificationAdapter();
+    }
 
     @Bean
     public VariableResolver variableResolver() {
@@ -36,12 +49,6 @@ public class QaOrchestratorConfig {
             VariableResolver variableResolver,
             ExpressionEvaluator expressionEvaluator) {
         return new ScenarioExecutionEngine(channels, eventPublisher, variableResolver, expressionEvaluator);
-    }
-
-    // SseEventPublisher is @Component but also needs to be the ExecutionEventPublisher bean
-    @Bean
-    public ExecutionEventPublisher executionEventPublisher(SseEventPublisher sseEventPublisher) {
-        return sseEventPublisher;
     }
 
     @Bean

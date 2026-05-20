@@ -1,4 +1,6 @@
-const BASE = process.env.NEXT_PUBLIC_QA_API ?? "/api/qa";
+const isServer = typeof window === "undefined";
+const BASE          = process.env.NEXT_PUBLIC_QA_API ?? (isServer ? "http://localhost:8700/api/qa" : "/api/qa");
+const RECORDER_BASE = isServer ? "http://localhost:8700" : "";
 
 export type ChannelType = "ISO8583" | "REST" | "KAFKA_ASSERT" | "CHAOS" | "PLAYWRIGHT";
 export type ExecutionStatus = "PENDING" | "RUNNING" | "PASSED" | "FAILED" | "CANCELLED";
@@ -66,6 +68,12 @@ export interface RunExecution {
   completedAt: string | null;
 }
 
+export async function fetchScenarioYaml(id: string): Promise<string> {
+  const res = await fetch(`${BASE}/scenarios/${id}/yaml`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /scenarios/${id}/yaml failed: ${res.status}`);
+  return res.text();
+}
+
 export async function fetchScenarios(params?: { platform?: string; project?: string; feature?: string }): Promise<TestScenario[]> {
   const qs = params ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString() : "";
   const res = await fetch(`${BASE}/scenarios${qs}`, { cache: "no-store" });
@@ -74,8 +82,8 @@ export async function fetchScenarios(params?: { platform?: string; project?: str
 }
 
 export async function fetchRuns(): Promise<TestRun[]> {
-  const res = await fetch(`${BASE}/runs`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`GET /runs failed: ${res.status}`);
+  const res = await fetch(`${BASE}/run-definitions`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /run-definitions failed: ${res.status}`);
   return res.json();
 }
 
@@ -140,7 +148,7 @@ export interface Recording {
 }
 
 export async function getProxyStatus(): Promise<ProxyStatus> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/proxy/status`, {
+  const res = await fetch(`${RECORDER_BASE}/recorder/proxy/status`, {
     cache: "no-store",
   });
   if (!res.ok) return { running: false };
@@ -148,7 +156,7 @@ export async function getProxyStatus(): Promise<ProxyStatus> {
 }
 
 export async function startProxy(): Promise<ProxyStatus> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/proxy/start`, {
+  const res = await fetch(`${RECORDER_BASE}/recorder/proxy/start`, {
     method: "POST",
   });
   if (!res.ok) throw new Error(`POST /recorder/proxy/start failed: ${res.status}`);
@@ -156,11 +164,11 @@ export async function startProxy(): Promise<ProxyStatus> {
 }
 
 export async function stopProxy(): Promise<void> {
-  await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/proxy/stop`, { method: "POST" });
+  await fetch(`${RECORDER_BASE}/recorder/proxy/stop`, { method: "POST" });
 }
 
 export async function fetchRecordings(): Promise<Recording[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/recordings`, {
+  const res = await fetch(`${RECORDER_BASE}/recorder/recordings`, {
     cache: "no-store",
   });
   if (!res.ok) return [];
@@ -174,7 +182,7 @@ export async function importHar(
   const form = new FormData();
   form.append("file", file);
   if (scenarioId) form.append("scenarioId", scenarioId);
-  const res = await fetch(`${process.env.NEXT_PUBLIC_QA_API ?? ""}/recorder/import-har`, {
+  const res = await fetch(`${RECORDER_BASE}/recorder/import-har`, {
     method: "POST",
     body: form,
   });

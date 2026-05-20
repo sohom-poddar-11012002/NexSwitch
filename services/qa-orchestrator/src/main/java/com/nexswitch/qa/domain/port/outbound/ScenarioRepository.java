@@ -25,5 +25,7 @@ public interface ScenarioRepository {
 
     List<TestSuite> findAllSuites();
 
+    Optional<String> findScenarioYaml(String id);
+
     void reload();
 }
