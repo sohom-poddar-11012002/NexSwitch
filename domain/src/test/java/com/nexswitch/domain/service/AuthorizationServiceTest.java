@@ -3,6 +3,7 @@ package com.nexswitch.domain.service;
 import com.nexswitch.domain.model.*;
 import com.nexswitch.domain.model.vo.*;
 import com.nexswitch.domain.port.inbound.AuthorizationCommand;
+import static org.mockito.ArgumentMatchers.anyInt;
 import com.nexswitch.domain.port.outbound.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -196,7 +197,7 @@ class AuthorizationServiceTest {
         stubNoFraud();
         AuthorizationCode authCode = AuthorizationCode.of("AUTH01");
         when(authorizationPort.authorize(any())).thenReturn(
-                new AuthorizationResult.Approved(authCode, java.time.Instant.now()));
+                new AuthorizationResult.Approved(authCode, java.time.Instant.now(), null));
 
         AuthorizationResult result = service.execute(validCommand());
 
@@ -215,6 +216,7 @@ class AuthorizationServiceTest {
         when(authorizationPort.authorize(any())).thenReturn(
                 new AuthorizationResult.Declined("05", "DO_NOT_HONOR"));
 
+
         AuthorizationResult result = service.execute(validCommand());
 
         assertThat(result).isInstanceOf(AuthorizationResult.Declined.class);
@@ -231,10 +233,11 @@ class AuthorizationServiceTest {
         stubActiveMerchant();
         stubTransactionSave();
         when(hsmPort.verifyArqc(any(), any(), anyInt(), any())).thenReturn(true);
+        when(hsmPort.generateArpc(any(), anyInt(), any())).thenReturn(new byte[8]);
         stubNoFraud();
         AuthorizationCode authCode = AuthorizationCode.of("AUTH01");
         when(authorizationPort.authorize(any())).thenReturn(
-                new AuthorizationResult.Approved(authCode, java.time.Instant.now()));
+                new AuthorizationResult.Approved(authCode, java.time.Instant.now(), null));
 
         AuthorizationResult result = service.execute(commandWithEmvData());
 
@@ -262,6 +265,8 @@ class AuthorizationServiceTest {
     }
 
     private AuthorizationCommand commandWithEmvData() {
+        // 8-byte ARQC (Tag 9F26), ATC=1, 33-byte CDOL1 transaction data
+        EmvData emvData = new EmvData(new byte[8], 1, new byte[33]);
         return new AuthorizationCommand(
                 UUID.randomUUID(),
                 MerchantId.of("MERCH0000999"),
@@ -272,7 +277,7 @@ class AuthorizationServiceTest {
                 PaymentNetwork.VISA,
                 PaymentMethod.CARD_CHIP,
                 SystemTraceAuditNumber.of("000042"),
-                new byte[]{0x01, 0x02},
+                emvData,
                 new byte[]{0x03, 0x04},
                 null,   // ksn: null (EMV without PIN in test)
                 "05"

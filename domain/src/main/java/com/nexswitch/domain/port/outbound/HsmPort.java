@@ -22,5 +22,6 @@ public interface HsmPort {
 
     boolean verifyArqc(PanHash panHash, byte[] arqc, int atc, byte[] transactionData);
 
-    byte[] generateArpc(byte[] arqc, String authResponseCode);
+    // atc is required to re-derive the card session key — same ATC the card used when generating ARQC
+    byte[] generateArpc(byte[] arqc, int atc, String authResponseCode);
 }

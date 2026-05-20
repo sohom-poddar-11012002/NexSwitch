@@ -1,6 +1,7 @@
 package com.nexswitch.adapters.outbound.hsm;
 
 import com.nexswitch.adapters.outbound.hsm.pkcs11.DukptKeyDerivation;
+import com.nexswitch.adapters.outbound.hsm.pkcs11.EmvCryptography;
 import com.nexswitch.adapters.outbound.hsm.pkcs11.SoftHsm2Session;
 import com.nexswitch.domain.model.vo.PanHash;
 import com.nexswitch.domain.port.outbound.HsmPort;
@@ -11,10 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -138,7 +135,7 @@ public class SoftHsm2HsmAdapter implements HsmPort {
     public boolean verifyMac(byte[] messageBytes, byte[] mac) {
         try {
             byte[] mak         = session.extractKey(makAlias);
-            byte[] computedMac = compute3DesMac(mak, messageBytes);
+            byte[] computedMac = EmvCryptography.compute3DesMac(mak, messageBytes);
             return Arrays.equals(computedMac, mac);
         } catch (Exception e) {
             throw new HsmOperationException("MAC verify failed", e);
@@ -154,16 +151,13 @@ public class SoftHsm2HsmAdapter implements HsmPort {
     @Override
     public boolean verifyArqc(PanHash panHash, byte[] arqc, int atc, byte[] transactionData) {
         try {
-            // LEARN: EMV Option A (MKD Method): card session key = f(IMK, PAN, ATC)
-            //        We derive it from the IMK stored in the HSM — same key the card used.
-            //        "imk" alias must be loaded per issuer BIN; in production there are many IMKs.
             if (!session.containsKey("payments-imk")) {
                 log.warn("hsm.arqc_verify skipped — no IMK loaded, treating as valid");
                 return true;
             }
             byte[] imk            = session.extractKey("payments-imk");
-            byte[] cardSessionKey = deriveCardSessionKey(imk, panHash, atc);
-            byte[] expectedArqc   = compute3DesMac(cardSessionKey, transactionData);
+            byte[] cardSessionKey = EmvCryptography.deriveCardSessionKey(imk, atc);
+            byte[] expectedArqc   = EmvCryptography.computeArqc(cardSessionKey, transactionData);
             return Arrays.equals(expectedArqc, Arrays.copyOf(arqc, 8));
         } catch (Exception e) {
             throw new HsmOperationException("ARQC verify failed", e);
@@ -171,67 +165,17 @@ public class SoftHsm2HsmAdapter implements HsmPort {
     }
 
     @Override
-    public byte[] generateArpc(byte[] arqc, String authResponseCode) {
+    public byte[] generateArpc(byte[] arqc, int atc, String authResponseCode) {
         try {
             if (!session.containsKey("payments-imk")) {
                 return new byte[8];
             }
-            // ARPC Method 1: ARPC = 3DES(CSK, ARQC XOR ARC_padded)
-            byte[] arc = authResponseCode.getBytes();
-            byte[] pad = new byte[8];
-            System.arraycopy(arc, 0, pad, 0, Math.min(arc.length, 8));
-            byte[] input = DukptKeyDerivation.xor(Arrays.copyOf(arqc, 8), pad);
-
             byte[] imk            = session.extractKey("payments-imk");
-            byte[] cardSessionKey = deriveCardSessionKey(imk, null, 0);
-            return DukptKeyDerivation.tripleDesEncrypt(cardSessionKey, input);
+            byte[] cardSessionKey = EmvCryptography.deriveCardSessionKey(imk, atc);
+            return EmvCryptography.computeArpc(cardSessionKey, arqc, authResponseCode);
         } catch (Exception e) {
             throw new HsmOperationException("ARPC generate failed", e);
         }
-    }
-
-    // ─── EMV card session key derivation ─────────────────────────────────────────────
-
-    // LEARN: EMV Option A card session key derivation — Unique Derivation Data (UDD) is built
-    //        from ATC + zeros + PAN check digit. This ties the session key to this specific
-    //        transaction (ATC) and this specific card (PAN) — brute-forcing one key gains nothing.
-    private byte[] deriveCardSessionKey(byte[] imk, PanHash panHash, int atc)
-            throws GeneralSecurityException {
-        byte[] udd = new byte[8];
-        udd[0] = (byte)(atc >> 8);
-        udd[1] = (byte)(atc & 0xFF);
-        // bytes 2-7: zeroed (standard UDD format for Option A single-length key)
-
-        byte[] cskL = DukptKeyDerivation.tripleDesEncrypt(imk, udd);
-        byte[] cskR = DukptKeyDerivation.tripleDesEncrypt(
-                DukptKeyDerivation.xor(imk, DukptKeyDerivation.BDK_VARIANT), udd);
-        byte[] csk  = new byte[16];
-        System.arraycopy(cskL, 0, csk, 0, 8);
-        System.arraycopy(cskR, 0, csk, 8, 8);
-        return csk;
-    }
-
-    // ─── 3DES-MAC (CBC mode, last 8 bytes) ───────────────────────────────────────────
-
-    private byte[] compute3DesMac(byte[] key16, byte[] data) throws GeneralSecurityException {
-        byte[] key24 = new byte[24];
-        System.arraycopy(key16, 0, key24, 0, 16);
-        System.arraycopy(key16, 0, key24, 16, 8);
-        SecretKey key = new SecretKeySpec(key24, "DESede");
-
-        // Pad to 8-byte block boundary with zeros
-        int padLen  = data.length % 8 == 0 ? 0 : 8 - (data.length % 8);
-        byte[] padded = Arrays.copyOf(data, data.length + padLen);
-
-        // CBC: chain each 8-byte block through DES3
-        Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, key);
-        byte[] block = new byte[8];
-        for (int i = 0; i < padded.length; i += 8) {
-            for (int j = 0; j < 8; j++) block[j] = (byte)(block[j] ^ padded[i + j]);
-            block = cipher.doFinal(block);
-        }
-        return block;
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────────────

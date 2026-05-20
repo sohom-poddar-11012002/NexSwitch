@@ -13,7 +13,7 @@ class AuthorizationResultTest {
     void approved_carries_authCode_and_timestamp() {
         var authCode = AuthorizationCode.of("483921");
         var now = Instant.now();
-        var result = new AuthorizationResult.Approved(authCode, now);
+        var result = new AuthorizationResult.Approved(authCode, now, null);
         assertThat(result.authCode()).isEqualTo(authCode);
         assertThat(result.authorizedAt()).isEqualTo(now);
     }
@@ -41,7 +41,7 @@ class AuthorizationResultTest {
     @Test
     void pattern_match_is_exhaustive_for_all_permits() {
         AuthorizationResult result = new AuthorizationResult.Approved(
-                AuthorizationCode.of("000001"), Instant.now());
+                AuthorizationCode.of("000001"), Instant.now(), null);
         String label = switch (result) {
             case AuthorizationResult.Approved a  -> "approved";
             case AuthorizationResult.Declined d  -> "declined";

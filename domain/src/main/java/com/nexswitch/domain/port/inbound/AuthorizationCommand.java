@@ -8,10 +8,10 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
 
-// LEARN: CommandObject — all inputs for one use case; emvData/pinBlock/ksn as byte[] for binary ISO 8583 fields.
+// LEARN: CommandObject — all inputs for one use case; emvData carries parsed Field 55 (ARQC + ATC + CDOL1 data).
 //        bin6 (first 6 PAN digits) is PCI-safe to store — only the full PAN requires hashing.
 //        ksn = Field 53 (10-byte Key Serial Number) carries the DUKPT counter; null for non-chip flows.
-//        The adapter extracts bin6 from Field 2 before hashing, then passes both into the command.
+//        emvData = null for non-chip flows (contactless, QR); present for EMV chip (posEntryMode 05x).
 public record AuthorizationCommand(
         UUID transactionId,
         MerchantId merchantId,
@@ -22,7 +22,7 @@ public record AuthorizationCommand(
         PaymentNetwork network,
         PaymentMethod paymentMethod,
         SystemTraceAuditNumber stan,
-        byte[] emvData,
+        EmvData emvData,
         byte[] pinBlock,
         byte[] ksn,
         String posEntryMode

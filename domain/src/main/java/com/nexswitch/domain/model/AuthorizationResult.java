@@ -11,7 +11,8 @@ public sealed interface AuthorizationResult
                 AuthorizationResult.Unknown,
                 AuthorizationResult.Blocked {
 
-    record Approved(AuthorizationCode authCode, Instant authorizedAt) implements AuthorizationResult {}
+    // arpc: null for non-chip (contactless/QR); 8-byte ARPC Method 1 for EMV chip — echoed in Field 91
+    record Approved(AuthorizationCode authCode, Instant authorizedAt, byte[] arpc) implements AuthorizationResult {}
 
     record Declined(String responseCode, String reason) implements AuthorizationResult {}
 

@@ -127,8 +127,16 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         //        using a session key derived from the card's master key and ATC (Application Transaction Counter).
         //        Verifying it proves the physical card (not just stolen card data) was present.
         //        Only relevant for EMV chip transactions — skip for MSR swipe (no emvData).
-        if (cmd.emvData() != null && cmd.emvData().length > 0) {
-            boolean arqcValid = hsmPort.verifyArqc(cmd.panHash(), cmd.emvData(), 0, cmd.emvData());
+        // LEARN: ARQC (Application Request Cryptogram) — the EMV chip MACs the CDOL1 transaction
+        //        data using a session key derived from the Issuer Master Key + ATC. Verifying it
+        //        proves the physical card (not cloned stripe data) was present. ATC is the
+        //        per-transaction counter that makes each session key unique.
+        if (cmd.emvData() != null) {
+            boolean arqcValid = hsmPort.verifyArqc(
+                    cmd.panHash(),
+                    cmd.emvData().arqc(),
+                    cmd.emvData().atc(),
+                    cmd.emvData().transactionData());
             if (!arqcValid) {
                 Transaction declined = txn.decline(RC_ARQC_FAILED);
                 transactionRepository.save(declined);
@@ -158,6 +166,16 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         // LEARN: The switch forwards the 0100 to Visa/MC via a persistent TCP connection (see §8).
         //        The network validates the ARQC with the issuer's HSM and returns 0110 with Field 39.
         AuthorizationResult result = authorizationPort.authorize(txn);
+
+        // ── Step 9: ARPC generation (EMV chip only) ────────────────────────
+        // LEARN: ARPC (Application Response Cryptogram) — the issuer generates this so the terminal
+        //        can verify the 0110 came from a real issuer. Method 1: ARPC = 3DES(CSK, ARQC XOR ARC).
+        //        ARC = "00" approved, "01" declined. Skipped for non-chip flows (emvData is null).
+        if (result instanceof AuthorizationResult.Approved a && cmd.emvData() != null) {
+            byte[] arpc = hsmPort.generateArpc(cmd.emvData().arqc(), cmd.emvData().atc(),
+                    result instanceof AuthorizationResult.Approved ? "00" : "01");
+            result = new AuthorizationResult.Approved(a.authCode(), a.authorizedAt(), arpc);
+        }
 
         // ── Update transaction to final state ──────────────────────────────
         // LEARN: Sealed interface switch — compiler forces all cases; no default needed.
