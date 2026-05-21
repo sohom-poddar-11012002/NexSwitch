@@ -1,0 +1,16 @@
+run:
+  id: qr-run
+  name: "Dynamic QR — generate, credit notification, expiry"
+  description: |
+    Tests the full Dynamic QR payment lifecycle over REST:
+    1. generate-pending: creates session, asserts PENDING status
+    2. payment-completed: simulates NPCI credit, asserts COMPLETED
+    3. qr-session-expired: asserts 404 for non-existent/expired sessions
+
+  session:
+    mode: STATELESS
+
+  scenarios:
+    - id: dynamic-qr-generate-pending
+    - id: dynamic-qr-payment-completed
+    - id: qr-session-expired

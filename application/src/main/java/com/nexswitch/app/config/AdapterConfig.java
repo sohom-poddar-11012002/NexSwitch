@@ -2,8 +2,11 @@ package com.nexswitch.app.config;
 
 import com.nexswitch.domain.port.outbound.*;
 import com.nexswitch.domain.service.AuthorizationService;
+import com.nexswitch.domain.service.GenerateQRService;
+import com.nexswitch.domain.service.QRSessionManager;
 import com.nexswitch.domain.service.ReversalService;
 import com.nexswitch.domain.service.TransactionStateMachine;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -47,5 +50,21 @@ public class AdapterConfig {
             TransactionRepository transactionRepository,
             AuthorizationPort authorizationPort) {
         return new ReversalService(transactionRepository, authorizationPort, new TransactionStateMachine());
+    }
+
+    @Bean
+    public QRSessionManager qrSessionManager(
+            @Value("${qr.session.ttl-minutes:5}") long ttlMinutes) {
+        return new QRSessionManager(ttlMinutes);
+    }
+
+    @Bean
+    public GenerateQRService generateQRService(
+            QRSessionManager qrSessionManager,
+            QrSessionPort qrSessionPort,
+            QrImageGeneratorPort qrImageGeneratorPort,
+            MerchantRepository merchantRepository) {
+        return new GenerateQRService(
+                qrSessionManager, qrSessionPort, qrImageGeneratorPort, merchantRepository);
     }
 }

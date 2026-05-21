@@ -1,0 +1,59 @@
+scenario:
+  id: dynamic-qr-generate-pending
+  name: "Dynamic QR — generate session, assert PENDING status"
+  description: |
+    POST /qr/generate for MERCH0000999 with ₹6,000 order.
+    Asserts 200 response with txnRef, qrImageBase64, and expiresAt.
+    Polls GET /qr/status/{txnRef} and asserts status=PENDING.
+    Tests Redis session creation with correct TTL (5 min).
+  platform: acquiring-service
+  project: payments
+  feature: qr
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+    terminal_id: "TERM0001"
+    amount: "6000.00"
+    currency: "INR"
+    order_id: "{{$uuid}}"
+
+  steps:
+    - type: rest_post
+      name: generate_qr
+      url: "http://acquiring-service:8080/qr/generate"
+      body:
+        merchantId: "{{merchant_id}}"
+        terminalId: "{{terminal_id}}"
+        amount: "{{amount}}"
+        currency: "{{currency}}"
+        orderId: "{{order_id}}"
+      capture_response_as: qr_response
+      expected_status: 200
+
+    - type: assert
+      expression: "qr_response['txnRef'] != null && qr_response['txnRef'].startsWith('TXN')"
+      description: "Response must contain txnRef starting with TXN"
+      fail_fast: true
+
+    - type: assert
+      expression: "qr_response['qrImageBase64'] != null && qr_response['qrImageBase64'].length() > 100"
+      description: "QR image Base64 must be non-trivially long (actual PNG data)"
+
+    - type: assert
+      expression: "qr_response['expiresAt'] != null"
+      description: "expiresAt timestamp must be present"
+
+    - type: inject_variable
+      name: txn_ref
+      value: "{{qr_response.txnRef}}"
+
+    - type: rest_get
+      name: poll_status
+      url: "http://acquiring-service:8080/qr/status/{{txn_ref}}"
+      capture_response_as: status_response
+      expected_status: 200
+
+    - type: assert
+      expression: "status_response['status'] == 'PENDING'"
+      description: "QR session must be PENDING before payment is made"

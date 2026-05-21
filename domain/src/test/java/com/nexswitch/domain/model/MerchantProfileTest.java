@@ -26,7 +26,8 @@ class MerchantProfileTest {
             MDR,
             RESERVE,
             "http://merchant.example.com/webhooks",
-            "secret-key"
+            "secret-key",
+            "test@payswiff"
         );
     }
 
@@ -52,7 +53,7 @@ class MerchantProfileTest {
             MerchantId.of("MERCH0000999"), "Test", "5411",
             MerchantProfile.Status.SUSPENDED,
             Money.of("500000.00", INR), Money.of("5000000.00", INR),
-            MDR, RESERVE, null, null
+            MDR, RESERVE, null, null, null
         );
         assertThat(suspended.isActive()).isFalse();
     }
@@ -62,7 +63,7 @@ class MerchantProfileTest {
         assertThatThrownBy(() -> new MerchantProfile(
             null, "Test", "5411", MerchantProfile.Status.ACTIVE,
             Money.of("500000.00", INR), Money.of("5000000.00", INR),
-            MDR, RESERVE, null, null
+            MDR, RESERVE, null, null, null
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -71,7 +72,7 @@ class MerchantProfileTest {
         assertThatThrownBy(() -> new MerchantProfile(
             MerchantId.of("MERCH0000999"), "  ", "5411", MerchantProfile.Status.ACTIVE,
             Money.of("500000.00", INR), Money.of("5000000.00", INR),
-            MDR, RESERVE, null, null
+            MDR, RESERVE, null, null, null
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -80,7 +81,7 @@ class MerchantProfileTest {
         assertThatThrownBy(() -> new MerchantProfile(
             MerchantId.of("MERCH0000999"), "Test", "5411", MerchantProfile.Status.ACTIVE,
             Money.of("500000.00", INR), Money.of("5000000.00", INR),
-            MDR, null, null, null
+            MDR, null, null, null, null
         )).isInstanceOf(IllegalArgumentException.class);
     }
 

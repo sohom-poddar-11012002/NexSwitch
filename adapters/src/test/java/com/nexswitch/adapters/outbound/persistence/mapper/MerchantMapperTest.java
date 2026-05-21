@@ -64,6 +64,7 @@ class MerchantMapperTest {
             new BigDecimal("0.0150"),
             new BigDecimal("0.0500"),
             null,
+            null,
             null
         );
 
@@ -74,13 +75,13 @@ class MerchantMapperTest {
     }
 
     @Test
-    void toEntity_ignoredFields_remainDefault() {
+    void toEntity_vpaAndCreatedAt_mappedCorrectly() {
         MerchantProfile domain = activeMerchant();
 
         MerchantEntity entity = mapper.toEntity(domain);
 
-        assertThat(entity.getVpa()).isNull();
-        assertThat(entity.getCreatedAt()).isNull();
+        assertThat(entity.getVpa()).isEqualTo("test@payswiff");
+        assertThat(entity.getCreatedAt()).isNull(); // not set by toEntity — DB default
     }
 
     @Test
@@ -94,6 +95,7 @@ class MerchantMapperTest {
             Money.of(new BigDecimal("5000000.00"), INR),
             new BigDecimal("0.0150"),
             new BigDecimal("0.0500"),
+            null,
             null,
             null
         );
@@ -185,7 +187,8 @@ class MerchantMapperTest {
             new BigDecimal("0.0150"),
             new BigDecimal("0.0500"),
             "https://merchant.example.com/webhooks",
-            "webhook-secret-key"
+            "webhook-secret-key",
+            "test@payswiff"
         );
     }
 

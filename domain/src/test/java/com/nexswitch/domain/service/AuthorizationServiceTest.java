@@ -295,7 +295,8 @@ class AuthorizationServiceTest {
                 new BigDecimal("1.50"),
                 new BigDecimal("5.00"),
                 "https://merchant.example.com/webhook",
-                "secret123"
+                "secret123",
+                null
         );
     }
 

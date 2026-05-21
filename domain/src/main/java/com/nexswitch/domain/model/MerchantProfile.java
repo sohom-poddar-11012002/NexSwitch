@@ -16,7 +16,8 @@ public record MerchantProfile(
     BigDecimal mdrPercentage,
     BigDecimal reservePercentage,
     String webhookUrl,
-    String webhookSecret
+    String webhookSecret,
+    String vpa               // nullable — UPI virtual payment address for QR payments
 ) {
     public MerchantProfile {
         if (merchantId == null) throw new IllegalArgumentException("merchantId must not be null");

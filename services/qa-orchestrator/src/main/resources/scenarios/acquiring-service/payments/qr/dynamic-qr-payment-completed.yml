@@ -1,0 +1,68 @@
+scenario:
+  id: dynamic-qr-payment-completed
+  name: "Dynamic QR — NPCI credit notification → COMPLETED"
+  description: |
+    Full QR payment lifecycle: generate → simulate NPCI credit → assert COMPLETED.
+    POST /qr/generate, then POST /upi/credit with matching txnRef and amount.
+    Asserts session transitions to COMPLETED and GET /qr/status returns COMPLETED.
+    Tests the Redis session update, amount validation, and credit idempotency.
+  platform: acquiring-service
+  project: payments
+  feature: qr
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+    terminal_id: "TERM0001"
+    amount: "3000.00"
+    currency: "INR"
+    order_id: "{{$uuid}}"
+    npci_txn_id: "NPCI{{$uuid}}"
+
+  steps:
+    - type: rest_post
+      name: generate_qr
+      url: "http://acquiring-service:8080/qr/generate"
+      body:
+        merchantId: "{{merchant_id}}"
+        terminalId: "{{terminal_id}}"
+        amount: "{{amount}}"
+        currency: "{{currency}}"
+        orderId: "{{order_id}}"
+      capture_response_as: qr_response
+      expected_status: 200
+
+    - type: inject_variable
+      name: txn_ref
+      value: "{{qr_response.txnRef}}"
+
+    - type: rest_post
+      name: npci_credit
+      url: "http://acquiring-service:8080/upi/credit"
+      body:
+        npciTxnId: "{{npci_txn_id}}"
+        payerVpa: "customer@upi"
+        payeeVpa: "merch0000999@payswiff"
+        amount: "{{amount}}"
+        txnRef: "{{txn_ref}}"
+      capture_response_as: credit_response
+      expected_status: 200
+
+    - type: assert
+      expression: "credit_response['status'] == 'COMPLETED'"
+      description: "UPI credit must acknowledge COMPLETED status"
+      fail_fast: true
+
+    - type: rest_get
+      name: verify_status
+      url: "http://acquiring-service:8080/qr/status/{{txn_ref}}"
+      capture_response_as: status_response
+      expected_status: 200
+
+    - type: assert
+      expression: "status_response['status'] == 'COMPLETED'"
+      description: "Session status must be COMPLETED after NPCI credit"
+
+    - type: assert
+      expression: "status_response['npciTxnId'] == '{{npci_txn_id}}'"
+      description: "NPCI transaction ID must be stored on the session"

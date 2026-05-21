@@ -26,6 +26,7 @@ public interface MerchantMapper {
         e.setReservePercentage(domain.reservePercentage());
         e.setWebhookUrl(domain.webhookUrl());
         e.setWebhookSecret(domain.webhookSecret());
+        e.setVpa(domain.vpa());
         return e;
     }
 
@@ -41,7 +42,8 @@ public interface MerchantMapper {
             entity.getMdrPercentage(),
             entity.getReservePercentage(),
             entity.getWebhookUrl(),
-            entity.getWebhookSecret()
+            entity.getWebhookSecret(),
+            entity.getVpa()
         );
     }
 }

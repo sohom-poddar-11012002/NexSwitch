@@ -154,7 +154,7 @@ class WebhookDeliveryServiceTest {
                 Money.of("100000.00", Currency.getInstance("INR")),
                 Money.of("1000000.00", Currency.getInstance("INR")),
                 new BigDecimal("1.50"), new BigDecimal("5.00"),
-                WEBHOOK_URL, WEBHOOK_SECRET
+                WEBHOOK_URL, WEBHOOK_SECRET, null
         );
     }
 
@@ -165,7 +165,7 @@ class WebhookDeliveryServiceTest {
                 Money.of("100000.00", Currency.getInstance("INR")),
                 Money.of("1000000.00", Currency.getInstance("INR")),
                 new BigDecimal("1.50"), new BigDecimal("5.00"),
-                null, null
+                null, null, null
         );
     }
 }

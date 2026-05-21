@@ -359,4 +359,14 @@ No frontend code changes are required.
 
 ---
 
-*Last updated: 2026-05-21 — expanded to all 20 test categories; planned sections marked ⬜; tickets #36 (DUKPT), #37 (EMV ARQC/ARPC), AMEX/Diners routing.*
+### QR / UPI Payments ✅ implemented
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `dynamic-qr-generate-pending` | `POST /qr/generate` for MERCH0000999, ₹6,000 | 200 response; txnRef starts with TXN; qrImageBase64 non-empty; status=PENDING | All |
+| `dynamic-qr-payment-completed` | Generate QR then `POST /upi/credit` with matching txnRef and amount | Credit ack status=COMPLETED; `GET /qr/status` returns COMPLETED; npciTxnId stored | All |
+| `qr-session-expired` | `GET /qr/status/{nonexistentTxnRef}` | 404 with reason message | All |
+
+---
+
+*Last updated: 2026-05-21 — #38+#91 Dynamic QR + caching; #36 DUKPT; #37 EMV ARQC/ARPC; AMEX/Diners routing.*

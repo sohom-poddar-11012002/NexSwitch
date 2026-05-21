@@ -30,7 +30,8 @@ public final class MerchantFixture {
             new BigDecimal("0.0150"),
             new BigDecimal("0.0500"),
             "http://merchant-simulator:9000/webhooks",
-            "test-webhook-secret-key"
+            "test-webhook-secret-key",
+            "merch0000999@payswiff"
         );
     }
 
@@ -45,6 +46,7 @@ public final class MerchantFixture {
             Money.of("1000000.00", INR),
             new BigDecimal("0.0150"),
             new BigDecimal("0.0500"),
+            null,
             null,
             null
         );
@@ -62,7 +64,8 @@ public final class MerchantFixture {
             new BigDecimal("0.0250"),
             new BigDecimal("0.0500"),
             "http://merchant-simulator:9000/webhooks",
-            "test-webhook-secret-key"
+            "test-webhook-secret-key",
+            "merch0000997@payswiff"
         );
     }
 }
