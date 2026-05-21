@@ -136,8 +136,9 @@ export default async function ReportsPage() {
 }
 
 function StatCard({ label, value, color = "text-[var(--text)]" }: { label: string; value: string; color?: string }) {
+  const testId = `stat-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+    <div data-testid={testId} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
       <p className="text-xs text-[var(--muted)] mb-1">{label}</p>
       <p className={`text-3xl font-semibold tabular-nums tracking-tight ${color}`}>{value}</p>
     </div>

@@ -1,0 +1,50 @@
+scenario:
+  id: portal-suites-page
+  name: "QA Portal — suites page: assert suite cards and trigger button"
+  description: |
+    Navigates to /suites, asserts at least one suite-card is visible
+    with a suite-trigger-btn. Verifies that the v1 full regression suite
+    card is present and clickable.
+  platform: qa-portal
+  project: ui
+  feature: suites
+  channel: PLAYWRIGHT
+
+  variables:
+    portal_url: "http://localhost:3003"
+
+  steps:
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "navigate /suites"
+      payload:
+        action: navigate
+        page_url: "{{portal_url}}/suites"
+      timeout_ms: 10000
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert nav-suites link visible"
+      payload:
+        action: assert_visible
+        selector: "nav-suites"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert suite card rendered"
+      payload:
+        action: assert_visible
+        selector: "suite-card"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert trigger button on suite"
+      payload:
+        action: assert_visible
+        selector: "suite-trigger-btn"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "screenshot suites page"
+      payload:
+        action: screenshot

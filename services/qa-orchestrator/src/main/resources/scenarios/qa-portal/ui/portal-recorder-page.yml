@@ -1,0 +1,64 @@
+scenario:
+  id: portal-recorder-page
+  name: "QA Portal — recorder page: proxy control and HAR import UI"
+  description: |
+    Navigates to /recorder, asserts the proxy Start/Stop buttons and HAR
+    import controls are visible. Tests the full recorder panel renders correctly
+    without a live qa-orchestrator proxy connection required.
+  platform: qa-portal
+  project: ui
+  feature: recorder
+  channel: PLAYWRIGHT
+
+  variables:
+    portal_url: "http://localhost:3003"
+
+  steps:
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "navigate /recorder"
+      payload:
+        action: navigate
+        page_url: "{{portal_url}}/recorder"
+      timeout_ms: 10000
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert nav-recorder link visible"
+      payload:
+        action: assert_visible
+        selector: "nav-recorder"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert proxy start button visible"
+      payload:
+        action: assert_visible
+        selector: "proxy-start-btn"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert proxy stop button visible"
+      payload:
+        action: assert_visible
+        selector: "proxy-stop-btn"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert HAR file input visible"
+      payload:
+        action: assert_visible
+        selector: "har-file-input"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert HAR import button visible"
+      payload:
+        action: assert_visible
+        selector: "har-import-btn"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "screenshot recorder page"
+      payload:
+        action: screenshot
