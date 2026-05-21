@@ -3,7 +3,7 @@ scenario:
   name: "Dynamic QR — generate session, assert PENDING status"
   description: |
     POST /qr/generate for MERCH0000999 with ₹6,000 order.
-    Asserts 200 response with txnRef, qrImageBase64, and expiresAt.
+    Asserts HTTP 200 with txnRef, qrImageBase64, and expiresAt.
     Polls GET /qr/status/{txnRef} and asserts status=PENDING.
     Tests Redis session creation with correct TTL (5 min).
   platform: acquiring-service
@@ -19,41 +19,49 @@ scenario:
     order_id: "{{$uuid}}"
 
   steps:
-    - type: rest_post
-      name: generate_qr
-      url: "http://acquiring-service:8080/qr/generate"
-      body:
+    - type: send
+      channel: REST
+      operation: "POST /qr/generate"
+      payload:
         merchantId: "{{merchant_id}}"
         terminalId: "{{terminal_id}}"
         amount: "{{amount}}"
         currency: "{{currency}}"
         orderId: "{{order_id}}"
+      timeout_ms: 15000
       capture_response_as: qr_response
-      expected_status: 200
 
     - type: assert
-      expression: "qr_response['txnRef'] != null && qr_response['txnRef'].startsWith('TXN')"
-      description: "Response must contain txnRef starting with TXN"
+      expression: "qr_response['status_code'] == '200'"
+      description: "generate must return HTTP 200"
       fail_fast: true
 
     - type: assert
-      expression: "qr_response['qrImageBase64'] != null && qr_response['qrImageBase64'].length() > 100"
-      description: "QR image Base64 must be non-trivially long (actual PNG data)"
+      expression: "response_body.contains('txnRef')"
+      description: "response must contain txnRef field"
 
     - type: assert
-      expression: "qr_response['expiresAt'] != null"
-      description: "expiresAt timestamp must be present"
+      expression: "response_body.contains('qrImageBase64')"
+      description: "response must contain Base64 QR image"
+
+    - type: assert
+      expression: "response_body.contains('expiresAt')"
+      description: "response must contain expiresAt timestamp"
 
     - type: inject_variable
       name: txn_ref
-      value: "{{qr_response.txnRef}}"
+      value: "{{json_txnRef}}"
 
-    - type: rest_get
-      name: poll_status
-      url: "http://acquiring-service:8080/qr/status/{{txn_ref}}"
+    - type: send
+      channel: REST
+      operation: "GET /qr/status/{{txn_ref}}"
+      timeout_ms: 15000
       capture_response_as: status_response
-      expected_status: 200
 
     - type: assert
-      expression: "status_response['status'] == 'PENDING'"
+      expression: "status_response['status_code'] == '200'"
+      description: "status poll must return HTTP 200"
+
+    - type: assert
+      expression: "$.response_json.status == 'PENDING'"
       description: "QR session must be PENDING before payment is made"

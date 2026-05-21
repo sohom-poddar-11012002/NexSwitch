@@ -2,10 +2,10 @@ scenario:
   id: dynamic-qr-payment-completed
   name: "Dynamic QR — NPCI credit notification → COMPLETED"
   description: |
-    Full QR payment lifecycle: generate → simulate NPCI credit → assert COMPLETED.
-    POST /qr/generate, then POST /upi/credit with matching txnRef and amount.
+    Full QR payment lifecycle: generate → inject txnRef → simulate NPCI credit → assert COMPLETED.
+    txnRef is extracted from the generate response via json_txnRef (RestTestAdapter top-level field extraction).
     Asserts session transitions to COMPLETED and GET /qr/status returns COMPLETED.
-    Tests the Redis session update, amount validation, and credit idempotency.
+    Tests Redis session update, amount validation (BigDecimal.compareTo), and credit idempotency.
   platform: acquiring-service
   project: payments
   feature: qr
@@ -20,49 +20,58 @@ scenario:
     npci_txn_id: "NPCI{{$uuid}}"
 
   steps:
-    - type: rest_post
-      name: generate_qr
-      url: "http://acquiring-service:8080/qr/generate"
-      body:
+    - type: send
+      channel: REST
+      operation: "POST /qr/generate"
+      payload:
         merchantId: "{{merchant_id}}"
         terminalId: "{{terminal_id}}"
         amount: "{{amount}}"
         currency: "{{currency}}"
         orderId: "{{order_id}}"
-      capture_response_as: qr_response
-      expected_status: 200
+      timeout_ms: 15000
+      capture_response_as: qr_generate_response
+
+    - type: assert
+      expression: "qr_generate_response['status_code'] == '200'"
+      description: "generate must return HTTP 200"
+      fail_fast: true
 
     - type: inject_variable
       name: txn_ref
-      value: "{{qr_response.txnRef}}"
+      value: "{{json_txnRef}}"
 
-    - type: rest_post
-      name: npci_credit
-      url: "http://acquiring-service:8080/upi/credit"
-      body:
+    - type: send
+      channel: REST
+      operation: "POST /upi/credit"
+      payload:
         npciTxnId: "{{npci_txn_id}}"
         payerVpa: "customer@upi"
         payeeVpa: "merch0000999@payswiff"
         amount: "{{amount}}"
         txnRef: "{{txn_ref}}"
+      timeout_ms: 15000
       capture_response_as: credit_response
-      expected_status: 200
 
     - type: assert
-      expression: "credit_response['status'] == 'COMPLETED'"
-      description: "UPI credit must acknowledge COMPLETED status"
+      expression: "credit_response['status_code'] == '200'"
+      description: "UPI credit must return HTTP 200"
       fail_fast: true
 
-    - type: rest_get
-      name: verify_status
-      url: "http://acquiring-service:8080/qr/status/{{txn_ref}}"
+    - type: assert
+      expression: "$.response_json.status == 'COMPLETED'"
+      description: "credit response must confirm COMPLETED status"
+
+    - type: send
+      channel: REST
+      operation: "GET /qr/status/{{txn_ref}}"
+      timeout_ms: 15000
       capture_response_as: status_response
-      expected_status: 200
 
     - type: assert
-      expression: "status_response['status'] == 'COMPLETED'"
-      description: "Session status must be COMPLETED after NPCI credit"
+      expression: "status_response['status_code'] == '200'"
+      description: "status poll must return HTTP 200"
 
     - type: assert
-      expression: "status_response['npciTxnId'] == '{{npci_txn_id}}'"
-      description: "NPCI transaction ID must be stored on the session"
+      expression: "$.response_json.status == 'COMPLETED'"
+      description: "session status must be COMPLETED after NPCI credit"

@@ -1,5 +1,7 @@
 package com.nexswitch.qa.adapter.channel;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexswitch.qa.domain.model.ChannelType;
 import com.nexswitch.qa.domain.model.StepResult;
 import com.nexswitch.qa.domain.model.TestStep;
@@ -23,6 +25,7 @@ public class RestTestAdapter implements TestChannelPort {
     private static final Logger log = LoggerFactory.getLogger(RestTestAdapter.class);
 
     private final RestClient restClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public RestTestAdapter(RestClient.Builder restClientBuilder) {
         this.restClient = restClientBuilder.build();
@@ -62,14 +65,25 @@ public class RestTestAdapter implements TestChannelPort {
         Map<String, Object> captured = new HashMap<>();
         captured.put("status_code", String.valueOf(response.getStatusCode().value()));
         captured.put("response_body", response.getBody());
-        // Expose response as captureResponseAs key if set
         String body = response.getBody();
         if (body != null && (body.startsWith("{") || body.startsWith("["))) {
             captured.put("response_json", body);
+            // LEARN: Top-level JSON fields extracted with json_ prefix so downstream inject_variable
+            //        steps can reference e.g. {{json_txnRef}} without a full JSONPath expression.
+            extractJsonFields(body, captured);
         }
 
         log.info("qa.rest.done method={} url={} status={}", method, url, response.getStatusCode().value());
         return new StepResult.Passed(step.operation(), Duration.between(start, Instant.now()), captured);
+    }
+
+    private void extractJsonFields(String json, Map<String, Object> captured) {
+        try {
+            Map<String, Object> parsed = objectMapper.readValue(json, new TypeReference<>() {});
+            parsed.forEach((k, v) -> {
+                if (v != null) captured.put("json_" + k, String.valueOf(v));
+            });
+        } catch (Exception ignored) {}
     }
 
     private String[] parseOperation(String operation) {

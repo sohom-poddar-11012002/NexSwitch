@@ -6,7 +6,7 @@ scenario:
     (either never created or already expired/deleted).
     Asserts 404 response — validates that expired sessions are not resurrectable.
     In local dev: use a non-existent txnRef directly.
-    On staging: can generate a QR and wait >5 min, then poll.
+    On staging: generate a QR and wait >5 min, then poll.
   platform: acquiring-service
   project: payments
   feature: qr
@@ -16,12 +16,17 @@ scenario:
     nonexistent_txn_ref: "TXN_EXPIRED_99999999"
 
   steps:
-    - type: rest_get
-      name: poll_nonexistent
-      url: "http://acquiring-service:8080/qr/status/{{nonexistent_txn_ref}}"
+    - type: send
+      channel: REST
+      operation: "GET /qr/status/{{nonexistent_txn_ref}}"
+      timeout_ms: 15000
       capture_response_as: status_response
-      expected_status: 404
 
     - type: assert
-      expression: "status_response['reason'] != null"
+      expression: "status_response['status_code'] == '404'"
+      description: "missing/expired session must return HTTP 404"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('reason')"
       description: "404 response must include a reason explaining the session is not found"
