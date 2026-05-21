@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # ─── Infrastructure ──────────────────────────────────────────────────────────
 
@@ -78,6 +76,36 @@ services:
     environment:
       SPAN_STORAGE_TYPE: memory
       COLLECTOR_OTLP_ENABLED: "true"
+
+  # ─── Dev Tools ───────────────────────────────────────────────────────────────
+  # LEARN: pgAdmin / kafka-ui / RedisInsight run inside the compose network so
+  #        they connect to infra via Docker hostnames (postgres:5432, kafka:9092,
+  #        redis:6379) — not localhost. Ports are exposed to the host for browser access.
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nexswitch.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports: ["5050:80"]
+    depends_on: [postgres]
+
+  kafka-ui:
+    image: provectus/kafka-ui:latest
+    ports: ["8082:8080"]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: nexswitch-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports: ["5540:5540"]
+    depends_on: [redis]
 
   # ─── Services ────────────────────────────────────────────────────────────────
 
@@ -253,7 +281,11 @@ services:
     ports: ["3002:80"]
     depends_on: [acquiring-service, settlement-service, reconciliation-service]
 
-  # ─── QA Platform ─────────────────────────────────────────────────────────────
+  # ─── QA Platform — DEV / STAGING ONLY, NEVER PRODUCTION ─────────────────────
+  # qa-orchestrator fires real ISO 8583 authorization requests, has chaos injection
+  # (Kafka down, Postgres slow, circuit breaker trip), and exposes an unauthenticated
+  # trigger API. It must never be included in a production deployment manifest.
+  # Stress/load testing (sustained TPS, p95 latency) is handled separately by k6 (#144).
 
   qa-orchestrator:
     build: services/qa-orchestrator

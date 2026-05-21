@@ -5,6 +5,40 @@ automated tests against the NexSwitch acquiring service. It connects to the
 **qa-orchestrator** backend, which executes scenarios over a live ISO 8583 TCP connection
 to the acquiring service.
 
+> **Master test plan:** `docs/qa-test-plan.md` contains the full 179-TC catalog with
+> priority, environment, and implementation status for every planned test. This document
+> covers how to *use* the portal and lists which scenarios exist today. Add a row here
+> whenever a new scenario YAML is committed.
+
+### Test Coverage Overview (20 categories)
+
+| # | Category | Scenarios | Status |
+|---|---|---|---|
+| 1 | Authorization — happy path | 6 | ✅ implemented |
+| 2 | Reversal | 1 | ✅ implemented |
+| 3 | Boundary / input rejection | 8 | ✅ implemented |
+| 4 | Cryptography / HSM | 3 | ✅ implemented |
+| 5 | Application security (MAC, replay, injection) | 5 | ✅ implemented |
+| 6 | Network security (TLS, mTLS, cert) | 3 | ⬜ planned |
+| 7 | Routing & resilience (BIN, network failover) | 3 | ⬜ planned |
+| 8 | Race conditions / concurrency | 2 | ✅ implemented |
+| 9 | Data consistency (DB assertions) | 4 | ⬜ planned |
+| 10 | Chaos engineering | 4 | ✅ implemented |
+| 11 | Performance baselines (latency SLA) | 3 | ⬜ planned — k6 (#144) |
+| 12 | Observability (logs, traces, metrics) | 3 | ⬜ planned |
+| 13 | Compliance (PCI DSS, RBI mandates) | 5 | ⬜ planned |
+| 14 | Contract testing (Pact consumer/provider) | 2 | ⬜ planned |
+| 15 | Analytics (reports, trends, pass rate) | 3 | ⬜ planned |
+| 16 | Frontend E2E (Playwright, 3 portals) | 5 | ⬜ planned — #143 |
+| 17 | Offline / FSE (terminal reconnect, queue) | 3 | ⬜ planned |
+| 18 | Business domain flows (EMI, DCC, partial approval) | 4 | ⬜ planned |
+| 19 | Fraud / AI / RAG pipeline | 4 | ⬜ planned |
+| 20 | Localization (INR, IST, RBI limits) | 3 | ⬜ planned |
+
+> **Performance / stress testing** (sustained TPS, p95 latency ramp-up) is handled by
+> k6 and Gatling — **not** the qa-orchestrator. See ticket #144. The qa-orchestrator
+> runs correctness and race condition scenarios only.
+
 ---
 
 ## Accessing the Portal
@@ -147,6 +181,122 @@ what it asserts, and which environment it is meaningful in.
 | `postgres-slow` | DB latency injected (500 ms+) | Auth completes within timeout; no 500 error | All |
 | `redis-down` | Redis container stopped | Auth completes (cache miss, fallback to DB) | All |
 
+### Network Security ⬜ planned
+
+> Requires staging environment with real TLS certs. Not runnable in local dev.
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `tls-expired-cert` | Acquiring REST endpoint called with an expired client cert | Connection refused / TLS handshake failure | Staging |
+| `mtls-missing-cert` | Internal service call without client certificate | 403 or connection reset | Staging |
+| `cert-rotation-zero-downtime` | Cert rotated mid-traffic; requests before and after rotation captured | All requests succeed; no connection gap | Staging |
+
+### Routing & Resilience ⬜ planned
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `unknown-bin-fallback` | BIN with no primary route; secondary route defined | Routed to secondary; field39=00 | Staging |
+| `visa-upstream-down-mc-fallback` | Visa mock upstream returns 503; Mastercard PAN routed via fallback | field39=00 via fallback; circuit breaker counter incremented | Staging |
+| `round-robin-multi-instance` | Auth request sent 10 times; checked against 2 acquiring-service instances | Requests distributed across both instances (verified via MDC traceId in logs) | Staging |
+
+### Data Consistency ⬜ planned
+
+> These scenarios require a `DatabaseAssertionAdapter` (planned) that connects to Postgres
+> and reads back the transaction row after the ISO 8583 response.
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `auth-persisted-correctly` | Normal Visa auth | DB row: status=AUTHORIZATION_PENDING, pan_hash set, amount_paise correct, stan matches | All |
+| `reversal-marks-reversed` | Auth followed by reversal | Transaction row status=REVERSED after reversal 0430 response | All |
+| `audit-log-written` | Any state transition | audit_log table has one row with transaction_id, old_status, new_status, actor | All |
+| `pan-never-in-plaintext` | Auth with real-looking PAN | transactions.pan_hash is SHA-256 hex; `pan` column absent or null | All |
+
+### Observability ⬜ planned
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `trace-propagated` | Normal auth with traceparent header injected | Jaeger shows single trace spanning acquiring → mock-upstream; no orphan spans | Local / Staging |
+| `mdc-fields-present` | Auth with known merchantId + cardLast4 | Application log line contains `traceId`, `transactionId`, `merchantId`, `cardLast4` — and no full PAN | All |
+| `prometheus-counter-incremented` | 5 auths; then Prometheus scrape | `payment_authorization_total` counter incremented by 5; `payment_authorization_latency_seconds` present | All |
+
+### Compliance ⬜ planned
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `pan-hash-only-stored` | Auth completed | Postgres select: no raw PAN in any column on `transactions` table | All |
+| `pin-never-in-logs` | Auth with PIN block | Log scan: no occurrence of PIN block hex or raw PIN in any log file | All |
+| `rbi-upi-mdr-zero` | UPI P2M transaction | MDR applied = 0.00 (RBI Jan 2020 mandate) | All |
+| `atc-replay-rejected` | Same ATC sent twice for same PAN | Second auth declined (field39=63 — security violation) | Staging (SoftHSM2 required) |
+| `rbi-afa-2fa-threshold` | CNP auth ≥ ₹2,000 | Acquirer flags AFA required; 3DS ECI present in response | Staging |
+
+### Contract Testing ⬜ planned
+
+> Pact contracts live under `services/acquiring-service/src/test/pact/`. Provider verification
+> is triggered via qa-orchestrator's Pact provider endpoint.
+
+| Contract | Consumer | Provider | Status |
+|---|---|---|---|
+| `acquiring-auth-contract` | payment-switch | acquiring-service | ⬜ planned |
+| `webhook-hmac-contract` | merchant-simulator | webhook-dispatcher | ⬜ planned |
+
+### Analytics ⬜ planned
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `pass-trend-chart-renders` | Reports page opened after 10 runs | Trend chart shows 10 data points; pass rate ≥ 80% for golden-path run | All |
+| `suite-run-history` | Suite triggered twice | Reports lists both runs with timestamps; second run has newer `completedAt` | All |
+| `per-scenario-breakdown` | Boundary run complete | Each boundary scenario has its own row in the report with individual pass/fail | All |
+
+### Frontend E2E — Playwright ⬜ planned (#143)
+
+> Playwright tests activate per-portal as `data-testid` attributes are added (see
+> `docs/specs/security.md §11` — attributes are stripped from production builds via SWC).
+
+| Test ID | Portal | Flow | Status |
+|---|---|---|---|
+| `simulator-happy-path` | frontend-simulator (3000) | Fill card form → submit → see approval screen | ⬜ planned |
+| `simulator-declined-card` | frontend-simulator | Submit expired card → see decline message | ⬜ planned |
+| `dashboard-transaction-list` | frontend-dashboard (3001) | Navigate to Transactions → see paginated list; filter by merchant | ⬜ planned |
+| `ops-settlement-run` | frontend-ops (3002) | Trigger settlement batch → confirm status changes to SETTLED | ⬜ planned |
+| `qa-portal-trigger-run` | frontend-qa-portal (3003) | Click Trigger on golden-path-run → watch live SSE steps update | ⬜ planned |
+
+### Offline / FSE ⬜ planned
+
+> FSE = Field Sales Executive. Tests simulate POS terminal behavior during connectivity loss
+> (common in tier-2/3 merchant sites in India). Requires the terminal-simulator tool.
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `terminal-disconnect-reconnect` | Acquiring TCP connection dropped mid-auth; terminal reconnects | Transaction not duplicated; correct ISO 8583 response received on reconnect | Staging |
+| `offline-queue-flush` | 5 auths queued offline in terminal-simulator; network restored | All 5 flushed in order; no duplicates; each receives field39=00 | Staging |
+| `mpos-nfc-tap-approved` | NFC tap via MPOS simulator (Field 22=91, contactless) | field39=00; contactless path exercised (ISO 8583 Field 22 = 0x91) | Staging / BrowserStack |
+
+### Business Domain Flows ⬜ planned
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `emi-conversion-3month` | Auth with EMI flag; 3-month plan selected | field39=00; EMI plan row created with correct installment amount | All |
+| `dcc-usd-conversion` | Auth in USD on INR terminal | DCC rate applied; amount converted; original USD amount in Field 54 | Staging |
+| `partial-approval-code10` | Issuer mock returns response code 10 with lower approved amount | field39=10; approved_amount < requested_amount; PARTIAL_APPROVAL event published | Staging |
+| `auth-hold-expiry` | Auth created; 8-day-old record checked by expiry monitor | Auth status → EXPIRED after monitor run; audit log row present | All |
+
+### Fraud / AI / RAG Pipeline ⬜ planned
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `fraud-score-high-velocity` | 10 auths from same PAN within 60 seconds | LangGraph fraud score > 0.85; transaction flagged REVIEW; Kafka event `fraud.alert` published | Staging |
+| `fraud-score-normal` | Single auth; normal amount; known merchant | Fraud score < 0.3; transaction proceeds; no REVIEW flag | All |
+| `rag-retrieval-masked-pan` | Settlement PDF ingested; query includes PAN-like string | Retrieved chunk has PAN masked (last 4 only); no raw PAN returned | Staging |
+| `prompt-injection-merchant-name` | Merchant name contains `Ignore previous instructions...` | Fraud score computed normally; no prompt injection executed; output is a numeric score | Staging |
+
+### Localization ⬜ planned
+
+| Scenario ID | What it tests | Asserts | Environment |
+|---|---|---|---|
+| `inr-lakh-format` | Transaction amount ₹1,00,000 displayed in simulator frontend | Amount rendered as `₹1,00,000` (Indian lakh format), not `₹100,000` | All |
+| `ist-timestamp` | Auth response timestamp (Field 7) converted for display | UI shows IST (UTC+5:30) timestamp, not UTC | All |
+| `upi-daily-limit` | UPI P2M auth ₹1,00,001 (above ₹1L NPCI daily limit) | field39=61 (exceeds withdrawal limit) | Staging |
+
 ---
 
 ## Pre-configured Runs
@@ -156,10 +306,13 @@ A **run** is an ordered list of scenarios with a shared session and variable def
 | Run ID | Mode | Scenarios | Purpose |
 |---|---|---|---|
 | `golden-path-run` | STATEFUL | Visa, RuPay, Mastercard, Amex, Diners, EMV-ARQC, Chip+PIN | Happy-path smoke test; run after every deploy |
-| `boundary-run` | STATELESS | All boundary scenarios | Validates input rejection; run on PR |
-| `security-run` | STATELESS | Replay attack, oversized field, EMV tampered ARQC | Adversarial; run on PR and nightly |
+| `boundary-run` | STATELESS | All boundary / input rejection scenarios | Validates input rejection; run on PR |
+| `security-run` | STATELESS | Replay attack, oversized field, EMV tampered ARQC, MAC bypass | Adversarial; run on PR and nightly |
 | `full-lifecycle-run` | STATEFUL | Auth + manual receipt check + reversal | Includes human gate; use for demo or release validation |
-| `infrastructure-run` | STATELESS | All chaos scenarios | Run on staging only; tears down infrastructure |
+| `infrastructure-run` | STATELESS | All chaos scenarios (Kafka, Postgres, Redis, circuit breaker) | Run on staging only; tears down infrastructure |
+| `compliance-run` | STATELESS | PAN-hash-only, PIN-never-in-logs, UPI MDR, ATC replay | PCI DSS + RBI compliance checks; run on staging |
+| `data-consistency-run` | STATELESS | DB assertions: auth-persisted, audit-log, pan-never-in-plaintext | Cross-layer correctness; run on staging |
+| `business-domain-run` | STATELESS | EMI, DCC, partial approval, auth hold expiry | Domain-specific flows; run on staging |
 
 ---
 
@@ -206,4 +359,4 @@ No frontend code changes are required.
 
 ---
 
-*Last updated: 2026-05-21 — tickets #36 (DUKPT), #37 (EMV ARQC/ARPC), AMEX/Diners routing.*
+*Last updated: 2026-05-21 — expanded to all 20 test categories; planned sections marked ⬜; tickets #36 (DUKPT), #37 (EMV ARQC/ARPC), AMEX/Diners routing.*
