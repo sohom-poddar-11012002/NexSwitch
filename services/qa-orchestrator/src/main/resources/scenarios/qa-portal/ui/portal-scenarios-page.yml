@@ -1,0 +1,43 @@
+scenario:
+  id: portal-scenarios-page
+  name: "QA Portal — scenarios page loads and displays scenario cards"
+  description: |
+    Navigates to /scenarios, asserts the page title is visible,
+    and verifies at least one scenario-card element is rendered.
+    Tests the qa-orchestrator → portal data flow end-to-end.
+  platform: qa-portal
+  project: ui
+  feature: scenarios
+  channel: PLAYWRIGHT
+
+  variables:
+    portal_url: "http://localhost:3003"
+
+  steps:
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "navigate /scenarios"
+      payload:
+        action: navigate
+        page_url: "{{portal_url}}/scenarios"
+      timeout_ms: 10000
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert nav-scenarios link active"
+      payload:
+        action: assert_visible
+        selector: "nav-scenarios"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert scenario cards rendered"
+      payload:
+        action: assert_visible
+        selector: "scenario-card"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "screenshot scenarios page"
+      payload:
+        action: screenshot

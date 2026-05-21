@@ -31,6 +31,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              data-testid={`nav-${label.toLowerCase()}`}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 active
                   ? "bg-[var(--surface-2)] text-[var(--text)] font-medium"

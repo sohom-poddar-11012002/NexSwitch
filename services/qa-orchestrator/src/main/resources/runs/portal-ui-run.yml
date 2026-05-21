@@ -1,0 +1,20 @@
+run:
+  id: portal-ui-run
+  name: "QA Portal UI — all 4 portal pages via Playwright stub"
+  description: |
+    End-to-end Playwright-channel smoke tests for all QA portal pages.
+    Requires: qa.channel.playwright.enabled=true + Playwright browsers installed.
+    Stub mode: adapter logs actions and always passes — safe to run without a browser.
+    1. portal-scenarios-page: loads scenarios list, asserts cards visible
+    2. portal-runs-trigger: assert run selector + trigger button, click trigger
+    3. portal-suites-page: assert suite cards and trigger button
+    4. portal-recorder-page: assert proxy controls and HAR import UI
+
+  session:
+    mode: STATELESS
+
+  scenarios:
+    - id: portal-scenarios-page
+    - id: portal-runs-trigger
+    - id: portal-suites-page
+    - id: portal-recorder-page

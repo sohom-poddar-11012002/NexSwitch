@@ -29,7 +29,7 @@ export default async function SuitesPage() {
 
 function SuiteCard({ suite }: { suite: TestSuite }) {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div data-testid="suite-card" className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">

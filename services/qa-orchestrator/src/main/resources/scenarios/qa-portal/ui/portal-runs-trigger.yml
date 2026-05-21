@@ -1,0 +1,58 @@
+scenario:
+  id: portal-runs-trigger
+  name: "QA Portal — runs page: select run and click trigger"
+  description: |
+    Navigates to /runs, asserts the run selector and trigger button are visible,
+    selects the golden-path-run, and clicks Trigger Run.
+    Verifies the UI redirects to the /live execution view after trigger.
+  platform: qa-portal
+  project: ui
+  feature: runs
+  channel: PLAYWRIGHT
+
+  variables:
+    portal_url: "http://localhost:3003"
+
+  steps:
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "navigate /runs"
+      payload:
+        action: navigate
+        page_url: "{{portal_url}}/runs"
+      timeout_ms: 10000
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert run selector visible"
+      payload:
+        action: assert_visible
+        selector: "run-selector"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "assert trigger button visible"
+      payload:
+        action: assert_visible
+        selector: "trigger-run-button"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "select golden-path-run"
+      payload:
+        action: fill
+        selector: "run-selector"
+        value: "golden-path-run"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "click trigger run"
+      payload:
+        action: click
+        selector: "trigger-run-button"
+
+    - type: send
+      channel: PLAYWRIGHT
+      operation: "screenshot after trigger"
+      payload:
+        action: screenshot
