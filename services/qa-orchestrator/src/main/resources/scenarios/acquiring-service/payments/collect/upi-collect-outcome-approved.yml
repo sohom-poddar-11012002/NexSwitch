@@ -1,0 +1,60 @@
+scenario:
+  id: upi-collect-outcome-approved
+  name: "UPI Collect — outcome webhook marks collect APPROVED"
+  description: |
+    Full lifecycle: POST /upi/collect → inject collectId → POST /upi/collect/outcome APPROVED.
+    Simulates Mock NPCI callback after customer approves the pull payment.
+    Asserts outcome ACK returns APPROVED status.
+  platform: acquiring-service
+  project: payments
+  feature: collect
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+    payer_vpa: "customer@upi"
+    amount: "250.00"
+    currency: "INR"
+    order_id: "{{$uuid}}"
+    npci_txn_id: "NPCI{{$uuid}}"
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "POST /upi/collect"
+      payload:
+        merchantId: "{{merchant_id}}"
+        payerVpa: "{{payer_vpa}}"
+        amount: "{{amount}}"
+        currency: "{{currency}}"
+        orderId: "{{order_id}}"
+        expirySeconds: 300
+      timeout_ms: 5000
+      capture_response_as: initiate_response
+
+    - type: assert
+      expression: "initiate_response['status_code'] == '200'"
+      description: "initiate must succeed before testing outcome"
+      fail_fast: true
+
+    - type: inject_variable
+      name: collect_id
+      value: "{{json_collectId}}"
+
+    - type: send
+      channel: REST
+      operation: "POST /upi/collect/outcome"
+      payload:
+        collectId: "{{collect_id}}"
+        status: "APPROVED"
+        npciTxnId: "{{npci_txn_id}}"
+      timeout_ms: 5000
+      capture_response_as: outcome_response
+
+    - type: assert
+      expression: "outcome_response['status_code'] == '200'"
+      description: "outcome webhook must return HTTP 200"
+
+    - type: assert
+      expression: "json_status == 'APPROVED'"
+      description: "outcome ACK must confirm APPROVED status"

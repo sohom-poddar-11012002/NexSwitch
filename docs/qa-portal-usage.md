@@ -315,6 +315,7 @@ A **run** is an ordered list of scenarios with a shared session and variable def
 | `golden-path-run` | STATEFUL | Visa, RuPay, Mastercard, Amex, Diners, EMV-ARQC, Chip+PIN | Happy-path smoke test; run after every deploy |
 | `boundary-run` | STATELESS | All boundary / input rejection scenarios | Validates input rejection; run on PR |
 | `rest-validation-run` | STATELESS | Bean Validation: missing field, bad format | REST layer input contract; run on PR |
+| `upi-collect-run` | STATELESS | Static QR generate, UPI Collect initiate, outcome APPROVED | Static QR + pull payment; run on PR |
 | `security-run` | STATELESS | Replay attack, oversized field, EMV tampered ARQC, MAC bypass | Adversarial; run on PR and nightly |
 | `full-lifecycle-run` | STATEFUL | Auth + manual receipt check + reversal | Includes human gate; use for demo or release validation |
 | `infrastructure-run` | STATELESS | All chaos scenarios (Kafka, Postgres, Redis, circuit breaker) | Run on staging only; tears down infrastructure |

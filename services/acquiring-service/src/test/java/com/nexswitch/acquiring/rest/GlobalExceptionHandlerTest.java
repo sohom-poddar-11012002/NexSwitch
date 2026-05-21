@@ -2,6 +2,7 @@ package com.nexswitch.acquiring.rest;
 
 import com.nexswitch.domain.model.QRGenerationResult;
 import com.nexswitch.domain.port.inbound.GenerateQRUseCase;
+import com.nexswitch.domain.port.inbound.GenerateStaticQRUseCase;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -25,15 +26,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 
-    @Mock GenerateQRUseCase generateQRUseCase;
-    @Mock QrSessionPort     qrSessionPort;
+    @Mock GenerateQRUseCase       generateQRUseCase;
+    @Mock GenerateStaticQRUseCase generateStaticQRUseCase;
+    @Mock QrSessionPort           qrSessionPort;
 
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders
-                .standaloneSetup(new QrController(generateQRUseCase, qrSessionPort))
+                .standaloneSetup(new QrController(generateQRUseCase, generateStaticQRUseCase, qrSessionPort))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

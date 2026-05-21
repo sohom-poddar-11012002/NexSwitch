@@ -1,0 +1,16 @@
+run:
+  id: upi-collect-run
+  name: "Static QR + UPI Collect — generate, initiate, outcome lifecycle"
+  description: |
+    Tests Static QR generation and UPI Collect (pull payment) lifecycle over REST:
+    1. static-qr-generate: GET /qr/static/{merchantId}, asserts UPI string without amount
+    2. upi-collect-initiate: POST /upi/collect, asserts PENDING collectId
+    3. upi-collect-outcome-approved: full lifecycle, simulates NPCI callback → APPROVED
+
+  session:
+    mode: STATELESS
+
+  scenarios:
+    - id: static-qr-generate
+    - id: upi-collect-initiate
+    - id: upi-collect-outcome-approved

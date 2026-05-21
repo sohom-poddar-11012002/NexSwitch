@@ -2,10 +2,13 @@ package com.nexswitch.acquiring.rest;
 
 import com.nexswitch.domain.model.QRGenerationResult;
 import com.nexswitch.domain.model.QRSession;
+import com.nexswitch.domain.model.StaticQRResult;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.model.vo.TerminalId;
 import com.nexswitch.domain.port.inbound.GenerateQRUseCase;
+import com.nexswitch.domain.port.inbound.GenerateStaticQRCommand;
+import com.nexswitch.domain.port.inbound.GenerateStaticQRUseCase;
 import com.nexswitch.domain.port.inbound.QRGenerationCommand;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import jakarta.validation.Valid;
@@ -29,12 +32,16 @@ public class QrController {
 
     private static final Logger log = LoggerFactory.getLogger(QrController.class);
 
-    private final GenerateQRUseCase generateQRUseCase;
-    private final QrSessionPort     qrSessionPort;
+    private final GenerateQRUseCase       generateQRUseCase;
+    private final GenerateStaticQRUseCase generateStaticQRUseCase;
+    private final QrSessionPort           qrSessionPort;
 
-    public QrController(GenerateQRUseCase generateQRUseCase, QrSessionPort qrSessionPort) {
-        this.generateQRUseCase = generateQRUseCase;
-        this.qrSessionPort     = qrSessionPort;
+    public QrController(GenerateQRUseCase generateQRUseCase,
+                        GenerateStaticQRUseCase generateStaticQRUseCase,
+                        QrSessionPort qrSessionPort) {
+        this.generateQRUseCase       = generateQRUseCase;
+        this.generateStaticQRUseCase = generateStaticQRUseCase;
+        this.qrSessionPort           = qrSessionPort;
     }
 
     @PostMapping("/generate")
@@ -75,6 +82,18 @@ public class QrController {
                 s.txnRef(), s.status().name(), s.npciTxnId(), s.expiresAt()));
     }
 
+    @GetMapping("/static/{merchantId}")
+    public ResponseEntity<?> staticQr(@PathVariable String merchantId) {
+        StaticQRResult result = generateStaticQRUseCase.execute(
+                new GenerateStaticQRCommand(MerchantId.of(merchantId)));
+        return switch (result) {
+            case StaticQRResult.Generated g -> ResponseEntity.ok(
+                    new StaticQrResponse(g.qrImageBase64(), g.vpa(), g.upiString()));
+            case StaticQRResult.Failed f    -> ResponseEntity.badRequest()
+                    .body(new ErrorResponse(f.reason()));
+        };
+    }
+
     // ── Request / response records ────────────────────────────────────────────
 
     record GenerateRequest(
@@ -88,6 +107,7 @@ public class QrController {
     ) {}
 
     record GenerateResponse(String txnRef, String qrImageBase64, Instant expiresAt) {}
+    record StaticQrResponse(String qrImageBase64, String vpa, String upiString) {}
     record StatusResponse(String txnRef, String status, String npciTxnId, Instant expiresAt) {}
     record ErrorResponse(String reason) {}
 }
