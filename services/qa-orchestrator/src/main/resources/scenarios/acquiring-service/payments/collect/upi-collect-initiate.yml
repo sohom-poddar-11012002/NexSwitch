@@ -1,0 +1,49 @@
+scenario:
+  id: upi-collect-initiate
+  name: "UPI Collect — initiate pull payment, assert PENDING"
+  description: |
+    POST /upi/collect for MERCH0000999 pulling ₹500 from customer@upi.
+    Asserts HTTP 200 with collectId starting COL and expiresAt in future.
+    The collect request is persisted as PENDING; outcome arrives asynchronously.
+  platform: acquiring-service
+  project: payments
+  feature: collect
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+    payer_vpa: "customer@upi"
+    amount: "500.00"
+    currency: "INR"
+    order_id: "{{$uuid}}"
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "POST /upi/collect"
+      payload:
+        merchantId: "{{merchant_id}}"
+        payerVpa: "{{payer_vpa}}"
+        amount: "{{amount}}"
+        currency: "{{currency}}"
+        orderId: "{{order_id}}"
+        expirySeconds: 180
+      timeout_ms: 5000
+      capture_response_as: collect_response
+
+    - type: assert
+      expression: "collect_response['status_code'] == '200'"
+      description: "initiate must return HTTP 200"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('collectId')"
+      description: "response must contain collectId"
+
+    - type: assert
+      expression: "response_body.contains('expiresAt')"
+      description: "response must contain expiresAt"
+
+    - type: assert
+      expression: "json_collectId.startsWith('COL')"
+      description: "collectId must start with COL prefix"

@@ -1,0 +1,51 @@
+scenario:
+  id: static-qr-generate
+  name: "Static QR — generate for merchant, assert UPI string format"
+  description: |
+    GET /qr/static/{merchantId} for MERCH0000999.
+    Asserts HTTP 200 with qrImageBase64, vpa, and upiString.
+    Verifies UPI string contains pa= and mc= but NOT am= (static QR has no amount).
+    Static QR is permanent — no Redis TTL, customer enters amount manually.
+  platform: acquiring-service
+  project: payments
+  feature: qr
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "GET /qr/static/{{merchant_id}}"
+      timeout_ms: 5000
+      capture_response_as: static_qr_response
+
+    - type: assert
+      expression: "static_qr_response['status_code'] == '200'"
+      description: "static QR endpoint must return HTTP 200"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('qrImageBase64')"
+      description: "response must contain Base64 QR image"
+
+    - type: assert
+      expression: "response_body.contains('vpa')"
+      description: "response must include the resolved VPA"
+
+    - type: assert
+      expression: "response_body.contains('upiString')"
+      description: "response must include the raw UPI deep-link string"
+
+    - type: assert
+      expression: "response_body.contains('pa=')"
+      description: "UPI string must contain payee address (pa=) parameter"
+
+    - type: assert
+      expression: "response_body.contains('mc=')"
+      description: "UPI string must contain merchant category code (mc=)"
+
+    - type: assert
+      expression: "!response_body.contains('am=')"
+      description: "Static QR must NOT contain amount (am=) — customer enters it manually"

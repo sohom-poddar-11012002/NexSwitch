@@ -3,6 +3,8 @@ package com.nexswitch.app.config;
 import com.nexswitch.domain.port.outbound.*;
 import com.nexswitch.domain.service.AuthorizationService;
 import com.nexswitch.domain.service.GenerateQRService;
+import com.nexswitch.domain.service.GenerateStaticQRService;
+import com.nexswitch.domain.service.InitiateCollectService;
 import com.nexswitch.domain.service.QRSessionManager;
 import com.nexswitch.domain.service.ReversalService;
 import com.nexswitch.domain.service.TransactionStateMachine;
@@ -66,5 +68,20 @@ public class AdapterConfig {
             MerchantRepository merchantRepository) {
         return new GenerateQRService(
                 qrSessionManager, qrSessionPort, qrImageGeneratorPort, merchantRepository);
+    }
+
+    @Bean
+    public GenerateStaticQRService generateStaticQRService(
+            MerchantRepository merchantRepository,
+            QrImageGeneratorPort qrImageGeneratorPort) {
+        return new GenerateStaticQRService(merchantRepository, qrImageGeneratorPort);
+    }
+
+    @Bean
+    public InitiateCollectService initiateCollectService(
+            MerchantRepository merchantRepository,
+            CollectRequestPort collectRequestPort,
+            UpiPspNotifier upiPspNotifier) {
+        return new InitiateCollectService(merchantRepository, collectRequestPort, upiPspNotifier);
     }
 }
