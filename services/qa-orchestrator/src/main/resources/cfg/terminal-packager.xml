@@ -46,6 +46,7 @@
   <isofield id="53"  length="8"   name="Security Control Information"  class="org.jpos.iso.IFB_BINARY"/>
   <isofield id="55"  length="510" name="ICC EMV Data"                  class="org.jpos.iso.IFA_LLLCHAR"/>
   <isofield id="90"  length="42"  name="Original Data Elements"        class="org.jpos.iso.IFA_NUMERIC"/>
+  <isofield id="91"  length="8"   name="Issuer Authentication Data"    class="org.jpos.iso.IFB_BINARY"/>
   <isofield id="100" length="11"  name="Receiving Institution ID"      class="org.jpos.iso.IFA_LLNUM"/>
   <isofield id="102" length="28"  name="Account ID1 VPA"               class="org.jpos.iso.IFA_LLCHAR"/>
   <isofield id="103" length="28"  name="Account ID2 Payer VPA"         class="org.jpos.iso.IFA_LLCHAR"/>

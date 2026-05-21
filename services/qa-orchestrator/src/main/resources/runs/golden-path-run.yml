@@ -15,3 +15,7 @@ run:
     - id: visa-auth-approved
     - id: rupay-auth-approved
     - id: mastercard-auth-approved
+    - id: amex-auth-approved
+    - id: diners-auth-approved
+    - id: emv-chip-arqc-approved
+    - id: chip-pin-dukpt-approved

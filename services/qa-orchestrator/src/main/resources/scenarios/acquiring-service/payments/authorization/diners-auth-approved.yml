@@ -1,0 +1,44 @@
+scenario:
+  id: diners-auth-approved
+  name: "Diners Club chip approval"
+  description: |
+    Golden path — Diners Club PAN (BIN 305693, 14 digits). BIN routing: char '3',
+    prefix "30" → default branch → PaymentNetwork.DINERS. Valid Luhn, sufficient funds.
+    Expects field39=00. Tests the Diners/default branch of inferNetwork() reachability.
+  platform: acquiring-service
+  project: payments
+  feature: authorization
+  channel: ISO8583
+
+  variables:
+    # Standard Diners test PAN (14 digits, valid Luhn)
+    pan: "30569309025904"
+    amount_paise: "000000350000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] == '00'"
+      description: "Diners Club authorization must be approved (00)"
+      fail_fast: true

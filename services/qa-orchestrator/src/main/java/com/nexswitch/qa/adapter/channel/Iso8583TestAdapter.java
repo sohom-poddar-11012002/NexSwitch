@@ -15,11 +15,13 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.Map;
 
 // LEARN: LengthPrefixedFraming — 4-byte big-endian int before each message body eliminates
@@ -98,6 +100,11 @@ public class Iso8583TestAdapter implements TestChannelPort {
                 case "merchant_name"    -> msg.set(43, rightPad(value, 40));
                 case "currency"         -> msg.set(49, value);
                 case "original_data"    -> msg.set(90, value);
+                // LEARN: Binary fields (F52 PIN block, F53 KSN) require byte[] not String;
+                //        F55 EMV TLV is LLLCHAR — BER-TLV bytes round-trip via ISO_8859_1.
+                case "pin_block_hex"    -> msg.set(52, HexFormat.of().parseHex(value));
+                case "ksn_hex"          -> msg.set(53, HexFormat.of().parseHex(value));
+                case "emv_data_hex"     -> msg.set(55, new String(HexFormat.of().parseHex(value.replaceAll("\\s", "")), StandardCharsets.ISO_8859_1));
                 default -> {
                     // Numeric keys like "field_48" → msg.set(48, ...)
                     if (key.startsWith("field_")) {
@@ -148,6 +155,11 @@ public class Iso8583TestAdapter implements TestChannelPort {
         if (response.hasField(39)) fields.put("field39", response.getString(39));
         if (response.hasField(38)) fields.put("approval_code", response.getString(38));
         if (response.hasField(37)) fields.put("rrn", response.getString(37));
+        // Field 91 (ARPC) is binary — expose as uppercase hex string for scenario assertions
+        if (response.hasField(91)) {
+            byte[] arpc = response.getBytes(91);
+            if (arpc != null) fields.put("field91_hex", HexFormat.of().withUpperCase().formatHex(arpc));
+        }
         return fields;
     }
 
