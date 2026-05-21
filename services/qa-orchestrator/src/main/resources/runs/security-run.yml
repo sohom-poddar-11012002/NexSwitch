@@ -14,3 +14,4 @@ run:
   scenarios:
     - id: replay-attack
     - id: oversized-field
+    - id: emv-chip-arqc-invalid

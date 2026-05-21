@@ -38,7 +38,7 @@ class ResilientAdaptersTest {
         var adapter = new ResilientNetworkAuthAdapter(delegate);
         var txn = transaction();
         when(delegate.authorize(txn))
-            .thenReturn(new AuthorizationResult.Approved(AuthorizationCode.of("000000"), Instant.now()));
+            .thenReturn(new AuthorizationResult.Approved(AuthorizationCode.of("000000"), Instant.now(), null));
 
         AuthorizationResult result = adapter.authorize(txn);
 

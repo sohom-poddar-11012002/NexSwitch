@@ -1,0 +1,50 @@
+scenario:
+  id: chip-pin-dukpt-approved
+  name: "Chip + PIN DUKPT approved"
+  description: |
+    EMV chip + PIN flow. Field 52 carries the encrypted PIN block (8 bytes, DUKPT-encrypted).
+    Field 53 carries the KSN (8 bytes). MockHsm decrypts and re-encrypts under ZPK, then
+    approves. Verifies that the F52/F53 binary fields are parsed and forwarded without error.
+    With SoftHSM2 (staging), the actual 3DES DUKPT derivation runs against the loaded BDK.
+  platform: acquiring-service
+  project: payments
+  feature: security
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000250000"
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+    # 8-byte encrypted PIN block (ISO 9564 Format 0 — mock value, any 8 bytes accepted by MockHsm)
+    pin_block_hex: "0102030405060708"
+    # 8-byte KSN suffix (full KSN is 10 bytes; packager field 53 carries 8 bytes here)
+    ksn_hex: "FFFF9876543210E0"
+
+  steps:
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+        pin_block_hex: "{{pin_block_hex}}"
+        ksn_hex: "{{ksn_hex}}"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] == '00'"
+      description: "Chip+PIN with DUKPT must be approved (00)"
+      fail_fast: true

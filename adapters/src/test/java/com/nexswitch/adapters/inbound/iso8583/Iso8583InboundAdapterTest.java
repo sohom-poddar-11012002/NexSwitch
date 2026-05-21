@@ -34,7 +34,7 @@ class Iso8583InboundAdapterTest {
     // LEARN: AtomicReference delegate — server is started once (@BeforeAll), but each test can swap
     //        the use-case behaviour by updating useCaseRef; the proxy lambda captures the reference.
     private final AtomicReference<ProcessPaymentUseCase> useCaseRef = new AtomicReference<>(
-            cmd -> new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now())
+            cmd -> new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now(), null)
     );
     private final ProcessPaymentUseCase proxyUseCase = cmd -> useCaseRef.get().execute(cmd);
 
@@ -57,7 +57,7 @@ class Iso8583InboundAdapterTest {
 
     @BeforeEach
     void resetUseCase() {
-        useCaseRef.set(cmd -> new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now()));
+        useCaseRef.set(cmd -> new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now(), null));
     }
 
     @Test
@@ -128,7 +128,7 @@ class Iso8583InboundAdapterTest {
         AtomicReference<AuthorizationCommand> captured = new AtomicReference<>();
         useCaseRef.set(cmd -> {
             captured.set(cmd);
-            return new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now());
+            return new AuthorizationResult.Approved(AuthorizationCode.of("AUTH01"), Instant.now(), null);
         });
 
         sendReceive(buildAuthRequest("000020"));

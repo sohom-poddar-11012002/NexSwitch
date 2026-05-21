@@ -24,7 +24,7 @@ class AuthorizationCommandTest {
                 PaymentNetwork.VISA,
                 PaymentMethod.CARD_CHIP,
                 SystemTraceAuditNumber.of("000042"),
-                new byte[]{0x01},
+                null,
                 new byte[]{0x02},
                 null,   // ksn: null for non-PIN flows
                 "07"
@@ -48,7 +48,7 @@ class AuthorizationCommandTest {
                 PaymentNetwork.VISA,
                 PaymentMethod.CARD_CHIP,
                 SystemTraceAuditNumber.of("000042"),
-                new byte[]{0x01},
+                null,
                 new byte[]{0x02},
                 null,
                 "07"
@@ -67,7 +67,7 @@ class AuthorizationCommandTest {
                 PaymentNetwork.VISA,
                 PaymentMethod.CARD_CHIP,
                 SystemTraceAuditNumber.of("000042"),
-                new byte[]{0x01},
+                null,
                 new byte[]{0x02},
                 null,
                 "07"
@@ -86,7 +86,7 @@ class AuthorizationCommandTest {
                 PaymentNetwork.VISA,
                 PaymentMethod.CARD_CHIP,
                 SystemTraceAuditNumber.of("000042"),
-                new byte[]{0x01},
+                null,
                 new byte[]{0x02},
                 null,
                 "07"
@@ -106,7 +106,7 @@ class AuthorizationCommandTest {
                 PaymentNetwork.VISA,
                 PaymentMethod.CARD_CHIP,
                 SystemTraceAuditNumber.of("000042"),
-                new byte[]{0x01},
+                null,
                 new byte[]{0x02},
                 null,
                 "07"

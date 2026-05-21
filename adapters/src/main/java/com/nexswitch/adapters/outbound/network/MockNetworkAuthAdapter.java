@@ -20,7 +20,8 @@ public class MockNetworkAuthAdapter implements AuthorizationPort {
     public AuthorizationResult authorize(Transaction transaction) {
         return new AuthorizationResult.Approved(
             AuthorizationCode.of("000000"),
-            Instant.now()
+            Instant.now(),
+            null   // ARPC added by AuthorizationService after this call
         );
     }
 

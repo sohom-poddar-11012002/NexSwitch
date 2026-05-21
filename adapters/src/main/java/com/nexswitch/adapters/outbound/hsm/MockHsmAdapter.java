@@ -40,7 +40,7 @@ public class MockHsmAdapter implements HsmPort {
     }
 
     @Override
-    public byte[] generateArpc(byte[] arqc, String authResponseCode) {
+    public byte[] generateArpc(byte[] arqc, int atc, String authResponseCode) {
         return new byte[8];
     }
 }

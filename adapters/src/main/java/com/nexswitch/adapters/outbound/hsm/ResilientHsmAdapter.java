@@ -70,7 +70,7 @@ public class ResilientHsmAdapter implements HsmPort {
     @CircuitBreaker(name = CB_NAME)
     @Bulkhead(name = BH_NAME, type = Bulkhead.Type.SEMAPHORE)
     @Override
-    public byte[] generateArpc(byte[] arqc, String authResponseCode) {
-        return delegate.generateArpc(arqc, authResponseCode);
+    public byte[] generateArpc(byte[] arqc, int atc, String authResponseCode) {
+        return delegate.generateArpc(arqc, atc, authResponseCode);
     }
 }

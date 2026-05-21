@@ -77,8 +77,9 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
         SystemTraceAuditNumber stan = SystemTraceAuditNumber.of(req.getString(11));
         String posEntryMode = req.getString(22) != null ? req.getString(22) : "000";
 
-        // LEARN: Field 53 (Key Management Data) carries the 10-byte KSN for DUKPT-encrypted PIN blocks.
-        //        Absent on contactless/QR flows where no PIN entry occurs at the terminal.
+        // LEARN: Field 55 carries the EMV TLV blob; we parse Tag 9F26 (ARQC) and Tag 9F36 (ATC)
+        //        here at the inbound boundary so the domain receives typed EmvData, not raw bytes.
+        //        Field 53 (Key Management Data) carries the 10-byte KSN for DUKPT PIN flows.
         AuthorizationCommand command = new AuthorizationCommand(
                 UUID.randomUUID(),
                 merchantId,
@@ -89,7 +90,7 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
                 inferNetwork(bin6),
                 parsePaymentMethod(posEntryMode),
                 stan,
-                req.getBytes(55),
+                EmvTlvParser.parse(req.getBytes(55)),
                 req.getBytes(52),
                 req.getBytes(53),
                 posEntryMode
@@ -117,6 +118,10 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
             case AuthorizationResult.Approved a -> {
                 res.set(39, RC_APPROVED);
                 res.set(38, a.authCode().value());
+                // LEARN: Field 91 (Issuer Authentication Data) carries the ARPC — the terminal
+                //        uses it to verify the 0110 came from a real issuer, not a man-in-the-middle.
+                //        Present only for EMV chip transactions; absent for contactless/QR flows.
+                if (a.arpc() != null) res.set(91, a.arpc());
                 yield res;
             }
             case AuthorizationResult.Declined d -> {
