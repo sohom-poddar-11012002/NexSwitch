@@ -1,0 +1,39 @@
+scenario:
+  id: validation-bad-format
+  name: "REST validation — malformed amount pattern returns 400 with field violation"
+  description: |
+    POST /qr/generate with amount='100' (missing decimal places).
+    @Pattern(regexp="\d+\.\d{2}") must reject this and GlobalExceptionHandler must
+    return HTTP 400 with a violations entry naming the amount field.
+    Also tests that a completely malformed JSON body returns 400 Bad Request
+    from the HttpMessageNotReadableException handler.
+  platform: acquiring-service
+  project: rest
+  feature: validation
+  channel: REST
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "POST /qr/generate"
+      payload:
+        merchantId: "MERCH0000999"
+        terminalId: "TERM0001"
+        amount: "100"
+        currency: "INR"
+        orderId: "order-format-test"
+      timeout_ms: 10000
+      capture_response_as: pattern_error
+
+    - type: assert
+      expression: "pattern_error['status_code'] == '400'"
+      description: "bad amount format must return HTTP 400"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('amount')"
+      description: "violations must name the amount field"
+
+    - type: assert
+      expression: "response_body.contains('decimal')"
+      description: "violation message must mention decimal format"

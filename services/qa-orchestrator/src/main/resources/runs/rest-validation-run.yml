@@ -1,0 +1,11 @@
+run:
+  id: rest-validation-run
+  name: "REST API validation — Bean Validation + GlobalExceptionHandler"
+
+  session:
+    mode: STATELESS
+    isolate_on_failure: true
+
+  scenarios:
+    - id: validation-missing-field
+    - id: validation-bad-format

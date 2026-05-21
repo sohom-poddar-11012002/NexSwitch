@@ -16,7 +16,7 @@ to the acquiring service.
 |---|---|---|---|
 | 1 | Authorization — happy path | 6 | ✅ implemented |
 | 2 | Reversal | 1 | ✅ implemented |
-| 3 | Boundary / input rejection | 8 | ✅ implemented |
+| 3 | Boundary / input rejection | 10 | ✅ implemented |
 | 4 | Cryptography / HSM | 3 | ✅ implemented |
 | 5 | Application security (MAC, replay, injection) | 5 | ✅ implemented |
 | 6 | Network security (TLS, mTLS, cert) | 3 | ⬜ planned |
@@ -141,6 +141,13 @@ what it asserts, and which environment it is meaningful in.
 | `wrong-currency` | Currency code not in ISO 4217 | field39=30 (Format error) | All |
 | `max-amount` | Amount at upper boundary (₹9,99,999.99) | field39=00 or 61 | All |
 | `expired-card` | Expiry date in the past (F14) | field39=54 (Expired card) | All |
+
+### Boundary — REST API validation ✅ implemented
+
+| Scenario ID | What it sends | Asserts | Environment |
+|---|---|---|---|
+| `validation-missing-field` | POST /qr/generate with merchantId omitted | HTTP 400, violations array contains `merchantId`, error=`Validation Failed` | All |
+| `validation-bad-format` | POST /qr/generate with amount=`"100"` (no decimals) | HTTP 400, violations array contains `amount` field name | All |
 
 ### Security — HSM cryptography
 
@@ -307,6 +314,7 @@ A **run** is an ordered list of scenarios with a shared session and variable def
 |---|---|---|---|
 | `golden-path-run` | STATEFUL | Visa, RuPay, Mastercard, Amex, Diners, EMV-ARQC, Chip+PIN | Happy-path smoke test; run after every deploy |
 | `boundary-run` | STATELESS | All boundary / input rejection scenarios | Validates input rejection; run on PR |
+| `rest-validation-run` | STATELESS | Bean Validation: missing field, bad format | REST layer input contract; run on PR |
 | `security-run` | STATELESS | Replay attack, oversized field, EMV tampered ARQC, MAC bypass | Adversarial; run on PR and nightly |
 | `full-lifecycle-run` | STATEFUL | Auth + manual receipt check + reversal | Includes human gate; use for demo or release validation |
 | `infrastructure-run` | STATELESS | All chaos scenarios (Kafka, Postgres, Redis, circuit breaker) | Run on staging only; tears down infrastructure |

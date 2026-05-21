@@ -5,6 +5,10 @@ import com.nexswitch.domain.model.TransactionStatus;
 import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +37,7 @@ public class UpiCreditController {
     }
 
     @PostMapping("/credit")
-    public ResponseEntity<?> credit(@RequestBody UpiCreditRequest req) {
+    public ResponseEntity<?> credit(@Valid @RequestBody UpiCreditRequest req) {
         log.info("upi.credit.received npciTxnId={} txnRef={} amount={}",
                 req.npciTxnId(), req.txnRef(), req.amount());
 
@@ -81,11 +85,14 @@ public class UpiCreditController {
     }
 
     record UpiCreditRequest(
-            String npciTxnId,
-            String payerVpa,
-            String payeeVpa,
-            String amount,
-            String txnRef
+            @NotBlank @Size(max = 35)   String npciTxnId,
+            @NotBlank @Pattern(regexp = "[\\w.]+@[\\w]+", message = "must be a valid UPI VPA e.g. user@bank")
+                                        String payerVpa,
+            @NotBlank @Pattern(regexp = "[\\w.]+@[\\w]+", message = "must be a valid UPI VPA e.g. user@bank")
+                                        String payeeVpa,
+            @NotBlank @Pattern(regexp = "\\d+\\.\\d{2}", message = "must be a decimal with 2 places e.g. 100.00")
+                                        String amount,
+            @NotBlank                   String txnRef
     ) {}
 
     record CreditAckResponse(String txnRef, String status) {}

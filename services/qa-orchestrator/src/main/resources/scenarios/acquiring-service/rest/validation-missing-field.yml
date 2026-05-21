@@ -1,0 +1,41 @@
+scenario:
+  id: validation-missing-field
+  name: "REST validation — missing required field returns 400 with violations"
+  description: |
+    POST /qr/generate with merchantId omitted.
+    GlobalExceptionHandler must intercept MethodArgumentNotValidException and return
+    HTTP 400 with a structured violations array naming the offending field.
+    Verifies Bean Validation (@NotBlank) is wired and handler is active.
+  platform: acquiring-service
+  project: rest
+  feature: validation
+  channel: REST
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "POST /qr/generate"
+      payload:
+        terminalId: "TERM0001"
+        amount: "100.00"
+        currency: "INR"
+        orderId: "order-validation-test"
+      timeout_ms: 10000
+      capture_response_as: error_response
+
+    - type: assert
+      expression: "error_response['status_code'] == '400'"
+      description: "missing field must return HTTP 400"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('violations')"
+      description: "response must include violations array"
+
+    - type: assert
+      expression: "response_body.contains('merchantId')"
+      description: "violations must name the missing merchantId field"
+
+    - type: assert
+      expression: "response_body.contains('Validation Failed')"
+      description: "error field must say Validation Failed"
