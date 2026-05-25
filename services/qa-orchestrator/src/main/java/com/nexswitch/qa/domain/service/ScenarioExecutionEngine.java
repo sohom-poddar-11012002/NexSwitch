@@ -97,7 +97,10 @@ public class ScenarioExecutionEngine {
 
     public void resumeWait(UUID executionId, String stepId, ResumeOutcome outcome) {
         String key = key(executionId, stepId);
-        CompletableFuture<ResumeOutcome> future = pendingResumes.get(key);
+        // LEARN: remove() on ConcurrentHashMap is atomic — avoids the race where
+        //        the waiting thread times out and removes the key between our get()
+        //        and complete(), which would complete an already-abandoned future.
+        CompletableFuture<ResumeOutcome> future = pendingResumes.remove(key);
         if (future != null) {
             future.complete(outcome);
         } else {

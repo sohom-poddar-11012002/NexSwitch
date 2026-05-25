@@ -23,9 +23,12 @@ public class Iso8583TcpServer implements SmartLifecycle {
     private final int configuredPort;
     private final Iso8583ChannelInitializer channelInitializer;
 
-    private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
-    private ChannelFuture serverChannelFuture;
+    // LEARN: volatile on shared mutable state — start() and stop() may run on different threads
+    //        (Spring lifecycle vs shutdown hook). Without volatile, the JIT is free to cache
+    //        null in stop()'s register, causing NPE or no-op shutdown.
+    private volatile EventLoopGroup bossGroup;
+    private volatile EventLoopGroup workerGroup;
+    private volatile ChannelFuture serverChannelFuture;
     private volatile boolean running;
 
     public Iso8583TcpServer(
