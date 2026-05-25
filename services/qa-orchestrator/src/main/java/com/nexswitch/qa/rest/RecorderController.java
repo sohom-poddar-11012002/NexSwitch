@@ -5,6 +5,7 @@ import com.nexswitch.qa.adapter.recorder.Iso8583RecorderProxy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Validated
 @RestController
 @RequestMapping("/recorder")
 public class RecorderController {

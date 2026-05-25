@@ -7,10 +7,13 @@ import com.nexswitch.domain.model.QRSession;
 import com.nexswitch.domain.model.vo.NpciTxnId;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -20,6 +23,8 @@ import java.util.Optional;
 //        acquirer after the PSP confirms payment. Money has already moved at this point.
 //        The acquiring service must validate the session, mark it completed, and fire a
 //        Kafka event so downstream services (webhook-dispatcher, settlement) can proceed.
+@Tag(name = "UPI Credit", description = "NPCI credit notification handler for completed QR payments")
+@Validated
 @RestController
 @RequestMapping("/upi")
 public class UpiCreditController {
@@ -35,6 +40,7 @@ public class UpiCreditController {
         this.transactionRepository = transactionRepository;
     }
 
+    @Operation(summary = "UPI credit notification", description = "Marks QR session completed when NPCI confirms payment; validates amount and session state")
     @PostMapping("/credit")
     public ResponseEntity<?> credit(@Valid @RequestBody UpiCreditRequest req) {
         log.info("upi.credit.received npciTxnId={} txnRef={} amount={}",

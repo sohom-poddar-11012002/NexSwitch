@@ -50,6 +50,8 @@ storage:
   provider: ${STORAGE_PROVIDER:local}
 
 management:
+  server:
+    port: 8081
   endpoints:
     web:
       exposure:

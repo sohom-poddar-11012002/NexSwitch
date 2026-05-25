@@ -4,12 +4,14 @@ import com.nexswitch.qa.domain.model.TestSuite;
 import com.nexswitch.qa.domain.port.inbound.TriggerSuiteUseCase;
 import com.nexswitch.qa.domain.port.outbound.ScenarioRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Validated
 @RestController
 @RequestMapping("/api/qa/suites")
 public class SuiteController {

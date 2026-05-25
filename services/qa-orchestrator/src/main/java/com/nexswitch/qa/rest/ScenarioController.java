@@ -5,10 +5,12 @@ import com.nexswitch.qa.domain.model.TestScenario;
 import com.nexswitch.qa.domain.port.outbound.ScenarioRepository;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Validated
 @RestController
 @RequestMapping("/api/qa")
 public class ScenarioController {
