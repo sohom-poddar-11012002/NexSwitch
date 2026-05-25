@@ -12,6 +12,8 @@ import com.nexswitch.domain.port.outbound.CollectRequestPort;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,11 +32,15 @@ public class UpiCollectController {
 
     private final InitiateCollectUseCase initiateCollectUseCase;
     private final CollectRequestPort     collectRequestPort;
+    private final String                 npciCallbackApiKey;
 
-    public UpiCollectController(InitiateCollectUseCase initiateCollectUseCase,
-                                CollectRequestPort collectRequestPort) {
+    public UpiCollectController(
+            InitiateCollectUseCase initiateCollectUseCase,
+            CollectRequestPort collectRequestPort,
+            @Value("${npci.callback.api-key:}") String npciCallbackApiKey) {
         this.initiateCollectUseCase = initiateCollectUseCase;
         this.collectRequestPort     = collectRequestPort;
+        this.npciCallbackApiKey     = npciCallbackApiKey;
     }
 
     @PostMapping
@@ -65,7 +71,17 @@ public class UpiCollectController {
     }
 
     @PostMapping("/outcome")
-    public ResponseEntity<?> outcome(@Valid @RequestBody OutcomeRequest req) {
+    public ResponseEntity<?> outcome(
+            // LEARN: Shared-secret header — the callback source (Mock NPCI / real NPCI) must
+            //        present X-Npci-Api-Key. Without this check any caller who guesses a valid
+            //        collectId could forge an APPROVED outcome. Key is blank in dev (check skipped).
+            @RequestHeader(value = "X-Npci-Api-Key", required = false) String incomingKey,
+            @Valid @RequestBody OutcomeRequest req) {
+        if (!npciCallbackApiKey.isBlank() && !npciCallbackApiKey.equals(incomingKey)) {
+            log.warn("upi.collect.outcome.unauthorized collectId={}", req.collectId());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Missing or invalid X-Npci-Api-Key"));
+        }
         log.info("upi.collect.outcome collectId={} status={} npciTxnId={}",
                 req.collectId(), req.status(), req.npciTxnId());
 
