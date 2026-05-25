@@ -55,7 +55,21 @@ public class WebhookDeliveryService {
     }
 
     public void dispatch(String merchantId, String eventType, String payloadJson) {
-        Optional<MerchantProfile> profile = merchantRepository.findById(MerchantId.of(merchantId));
+        // LEARN: DB call inside a Kafka @KafkaListener — if this throws unchecked the consumer
+        //        thread crashes and halts ALL webhook delivery until the app restarts. Guard it
+        //        explicitly and route to DLQ instead so the thread stays alive.
+        Optional<MerchantProfile> profile;
+        try {
+            profile = merchantRepository.findById(MerchantId.of(merchantId));
+        } catch (Exception e) {
+            log.error("webhook.merchant_lookup_failed merchantId={} eventType={} — routing to DLQ",
+                    merchantId, eventType, e);
+            WebhookDeliveryEntity dlqEntry = new WebhookDeliveryEntity(
+                    UUID.randomUUID().toString(), merchantId, eventType, payloadJson);
+            dlqEntry.markFailed();
+            dlqPublisher.publish(dlqEntry);
+            return;
+        }
         if (profile.isEmpty()) {
             log.debug("merchant not found merchantId={} — skipping webhook", merchantId);
             return;

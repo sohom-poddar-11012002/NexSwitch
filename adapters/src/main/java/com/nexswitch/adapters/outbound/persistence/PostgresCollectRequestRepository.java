@@ -6,6 +6,7 @@ import com.nexswitch.adapters.outbound.persistence.mapper.CollectRequestMapper;
 import com.nexswitch.domain.model.CollectRequest;
 import com.nexswitch.domain.port.outbound.CollectRequestPort;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -32,6 +33,10 @@ public class PostgresCollectRequestRepository implements CollectRequestPort {
     }
 
     @Override
+    // LEARN: @Transactional wraps findByCollectId + save in a single DB transaction —
+    //        without it, concurrent UPI Collect outcome POSTs on the same collectId can
+    //        interleave: both reads succeed, one write is silently overwritten.
+    @Transactional
     public void update(CollectRequest request) {
         CollectRequestEntity entity = jpa.findByCollectId(request.collectId().value())
                 .orElseThrow(() -> new IllegalArgumentException("CollectRequest not found: " + request.collectId()));

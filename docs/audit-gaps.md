@@ -45,13 +45,13 @@ Fix in this sequence: **G0 bugs first** (break at runtime) → **G1 security** �
 |---|---|---|---|
 | [ ] G2-1 | Adapters / domain | **Transactional Outbox not implemented** — `outbox_events` table exists (V9) but no Java writer, poller, or relay. `Transaction.raiseEvent()` raises events; `pullDomainEvents()` is never called in production; Kafka never receives them. | CRITICAL |
 | [ ] N18 | All use-case classes | `pullDomainEvents()` never called after `save()` — domain events raised by `TransactionStateMachine` are silently discarded. Blocked by G2-1. | HIGH |
-| [ ] G2-2 | `V1__create_transactions.sql` | No `CHECK (amount > 0)` — zero and negative amounts pass all the way to DB. | HIGH |
-| [ ] N32 | `V1__create_transactions.sql` | `amount` column has no `CHECK` constraint. Add `CONSTRAINT positive_amount CHECK (amount > 0)`. | HIGH |
-| [ ] N33 | `V8__create_reserve_accounts.sql` | No `CHECK (balance >= 0)` — reserve balance can go negative at DB level. Add `CONSTRAINT non_negative_balance CHECK (balance >= 0)`. | HIGH |
-| [ ] N35 | DB migrations | Two tables spec'd in `database.md:319-337` but never migrated: `pan_atc_watermarks` (ATC replay detection) and `network_success_rates` (routing fallback decisions). | MEDIUM |
-| [ ] G2-3 | `V7__create_reconciliation.sql` | No index on `reconciliation_runs(status)` — settlement queries filter by status; full table scan at scale. Add `CREATE INDEX idx_recon_status ON reconciliation_runs(status)`. | MEDIUM |
-| [ ] N34 | `V7__create_reconciliation.sql` | Same as G2-3 above. | MEDIUM |
-| [ ] N57 | `WebhookDeliveryService.java:~58` | `merchantRepository.findById()` inside Kafka consumer not wrapped in try-catch — transient DB failure throws unchecked, crashes consumer thread, halts all webhook delivery. | HIGH |
+| [x] G2-2 | `V1__create_transactions.sql` | No `CHECK (amount > 0)` — zero and negative amounts pass all the way to DB. | HIGH |
+| [x] N32 | `V1__create_transactions.sql` | `amount` column has no `CHECK` constraint. Add `CONSTRAINT positive_amount CHECK (amount > 0)`. | HIGH |
+| [x] N33 | `V8__create_reserve_accounts.sql` | No `CHECK (balance >= 0)` — reserve balance can go negative at DB level. Add `CONSTRAINT non_negative_balance CHECK (balance >= 0)`. | HIGH |
+| [x] N35 | DB migrations | Two tables spec'd in `database.md:319-337` but never migrated: `pan_atc_watermarks` (ATC replay detection) and `network_success_rates` (routing fallback decisions). | MEDIUM |
+| [x] G2-3 | `V7__create_reconciliation.sql` | No index on `reconciliation_runs(status)` — settlement queries filter by status; full table scan at scale. Add `CREATE INDEX idx_recon_status ON reconciliation_runs(status)`. | MEDIUM |
+| [x] N34 | `V7__create_reconciliation.sql` | Same as G2-3 above. | MEDIUM |
+| [x] N57 | `WebhookDeliveryService.java:~58` | `merchantRepository.findById()` inside Kafka consumer not wrapped in try-catch — transient DB failure throws unchecked, crashes consumer thread, halts all webhook delivery. | HIGH |
 | [ ] N78 | `WebhookConfig.java:35` | **`RestClient` for outbound webhook delivery has no connect or read timeout** — `RestClient.builder().defaultHeader(...).build()` with no `requestFactory`. CLAUDE.md rule 4 mandates webhook 5s timeout. A slow or hung merchant endpoint will block the delivery thread indefinitely. Add `HttpComponentsClientHttpRequestFactory` with 5s connect + read timeouts. | HIGH |
 
 ---
@@ -145,7 +145,7 @@ Fix in this sequence: **G0 bugs first** (break at runtime) → **G1 security** �
 | [ ] N77 | `AuthorizationService`, `InitiateCollectService`, `QRSessionManager`, `Transaction`, `CollectRequest`, `QRSession`, `DomainEvent` | **`Instant.now()` hardcoded throughout domain** — no `Clock` injection anywhere. `isExpired()`, `withStatus()`, event timestamps all pin to wall time; unit tests cannot control time, making time-sensitive assertions flaky. Inject `java.time.Clock` into domain services; pass it to record factory methods. | LOW |
 | [ ] N80 | `CachingMerchantRepository.java:53`, `CachingBinLookupAdapter.java:50`, `RedisQrSessionAdapter.java:36`, `RestTestAdapter.java:28` | `new ObjectMapper()` raw instantiation in 4 places — bypasses the Spring-managed bean that has `JavaTimeModule`, `FAIL_ON_UNKNOWN_PROPERTIES=false`, and other auto-configured modules. Any `Instant`/`LocalDate` field will throw `InvalidDefinitionException` at runtime. Inject `ObjectMapper` via constructor instead. | MEDIUM |
 | [x] N83 | `WebhookConfig.java:24-31` | **`@Value` on fields** — `bootstrapServers`, `dlqTopic`, `maxAttempts` are all `private` field injections. ArchUnit Rule 10 (`DomainArchitectureTest`) bans `@Value` on fields and scans all `com.nexswitch.*` packages — this **will fail CI**. Move all three to `@Configuration` constructor parameters. | HIGH |
-| [ ] N85 | `PostgresCollectRequestRepository.java:35-40` | `update()` does `findByCollectId()` + `jpa.save()` without `@Transactional` — two separate JPA calls with no transaction boundary. Concurrent UPI Collect outcome POSTs on the same `collectId` can interleave: both read the same entity, one write is lost. Add `@Transactional`. | HIGH |
+| [x] N85 | `PostgresCollectRequestRepository.java:35-40` | `update()` does `findByCollectId()` + `jpa.save()` without `@Transactional` — two separate JPA calls with no transaction boundary. Concurrent UPI Collect outcome POSTs on the same `collectId` can interleave: both read the same entity, one write is lost. Add `@Transactional`. | HIGH |
 
 ---
 
@@ -171,7 +171,7 @@ Fix in this sequence: **G0 bugs first** (break at runtime) → **G1 security** �
 |---|---|---|
 | G0 Runtime Bugs | 5 | [x] DONE |
 | G1 Security | 10 | 6/10 done |
-| G2 Data Integrity | 10 | [ ] |
+| G2 Data Integrity | 10 | 7/10 done (G2-1 Outbox + N18 own PR; N78 RestClient timeout deferred) |
 | G3 Resilience | 5 | [ ] |
 | G4 API Surface | 10 | [ ] |
 | G5 Observability | 4 | [ ] |
