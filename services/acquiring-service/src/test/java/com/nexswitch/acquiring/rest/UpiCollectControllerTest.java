@@ -99,7 +99,7 @@ class UpiCollectControllerTest {
                 .expiresAt(Instant.now().plusSeconds(180))
                 .build();
 
-        when(collectRequestPort.findByCollectId("COL1234567890ABCDEF"))
+        when(collectRequestPort.findByCollectId(new CollectId("COL1234567890ABCDEF")))
                 .thenReturn(Optional.of(pending));
 
         mvc.perform(post("/upi/collect/outcome")
@@ -113,7 +113,7 @@ class UpiCollectControllerTest {
 
     @Test
     void outcome_notFound_returns400() throws Exception {
-        when(collectRequestPort.findByCollectId("COLNOTEXIST")).thenReturn(Optional.empty());
+        when(collectRequestPort.findByCollectId(new CollectId("COLNOTEXIST"))).thenReturn(Optional.empty());
 
         mvc.perform(post("/upi/collect/outcome")
                 .contentType(MediaType.APPLICATION_JSON)

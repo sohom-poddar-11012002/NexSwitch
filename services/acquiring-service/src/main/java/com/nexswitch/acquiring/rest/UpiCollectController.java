@@ -3,6 +3,7 @@ package com.nexswitch.acquiring.rest;
 import com.nexswitch.acquiring.rest.dto.*;
 import com.nexswitch.domain.model.CollectRequest;
 import com.nexswitch.domain.model.InitiateCollectResult;
+import com.nexswitch.domain.model.vo.CollectId;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.model.vo.NpciTxnId;
@@ -85,7 +86,7 @@ public class UpiCollectController {
         log.info("upi.collect.outcome collectId={} status={} npciTxnId={}",
                 req.collectId(), req.status(), req.npciTxnId());
 
-        Optional<CollectRequest> maybeRequest = collectRequestPort.findByCollectId(req.collectId());
+        Optional<CollectRequest> maybeRequest = collectRequestPort.findByCollectId(CollectId.of(req.collectId()));
         if (maybeRequest.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(new ErrorResponse("CollectRequest not found: " + req.collectId()));
