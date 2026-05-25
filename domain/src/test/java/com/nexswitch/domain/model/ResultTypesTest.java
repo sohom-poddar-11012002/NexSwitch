@@ -1,5 +1,6 @@
 package com.nexswitch.domain.model;
 
+import com.nexswitch.domain.model.vo.TxnRef;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -72,8 +73,8 @@ class ResultTypesTest {
     @Test
     void qrGenerationResult_generated_carries_all_fields() {
         var now = Instant.now();
-        var result = new QRGenerationResult.Generated("TXN20260513001", "base64data==", now);
-        assertThat(result.txnRef()).isEqualTo("TXN20260513001");
+        var result = new QRGenerationResult.Generated(new TxnRef("TXN20260513001"), "base64data==", now);
+        assertThat(result.txnRef()).isEqualTo(new TxnRef("TXN20260513001"));
         assertThat(result.qrImageBase64()).isEqualTo("base64data==");
         assertThat(result.expiresAt()).isEqualTo(now);
     }

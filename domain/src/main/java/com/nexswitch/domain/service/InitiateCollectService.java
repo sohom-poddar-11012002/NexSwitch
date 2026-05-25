@@ -2,6 +2,7 @@ package com.nexswitch.domain.service;
 
 import com.nexswitch.domain.model.CollectRequest;
 import com.nexswitch.domain.model.InitiateCollectResult;
+import com.nexswitch.domain.model.vo.CollectId;
 import com.nexswitch.domain.model.MerchantProfile;
 import com.nexswitch.domain.port.inbound.InitiateCollectCommand;
 import com.nexswitch.domain.port.inbound.InitiateCollectUseCase;
@@ -44,7 +45,7 @@ public class InitiateCollectService implements InitiateCollectUseCase {
 
         Instant now      = Instant.now();
         Instant expiresAt = now.plusSeconds(command.expirySeconds());
-        String collectId = "COL" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+        CollectId collectId = CollectId.of("COL" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
 
         CollectRequest request = CollectRequest.builder()
                 .collectId(collectId)

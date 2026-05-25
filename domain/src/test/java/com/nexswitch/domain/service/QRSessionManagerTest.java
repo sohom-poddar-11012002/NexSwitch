@@ -3,6 +3,7 @@ package com.nexswitch.domain.service;
 import com.nexswitch.domain.model.QRSession;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.TxnRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -37,14 +38,14 @@ class QRSessionManagerTest {
         assertThat(session.amount()).isEqualTo(AMOUNT);
         assertThat(session.status()).isEqualTo(QRSession.Status.PENDING);
         assertThat(session.npciTxnId()).isNull();
-        assertThat(session.txnRef()).startsWith("TXN");
+        assertThat(session.txnRef().value()).startsWith("TXN");
         assertThat(session.expiresAt()).isAfter(session.createdAt());
     }
 
     @Test
     void create_txnRefContainsMerchantId() {
         QRSession session = manager.create(MERCHANT, AMOUNT, "order-001");
-        assertThat(session.txnRef()).contains("MERCH0000999");
+        assertThat(session.txnRef().value()).contains("MERCH0000999");
     }
 
     @Test
@@ -82,7 +83,7 @@ class QRSessionManagerTest {
         assertThat(upi).startsWith("upi://pay?");
         assertThat(upi).contains("pa=merchant%40payswiff");
         assertThat(upi).contains("pn=Test+Merchant");
-        assertThat(upi).contains("tr=" + session.txnRef());
+        assertThat(upi).contains("tr=" + session.txnRef().value());
         assertThat(upi).contains("am=6000.00");
         assertThat(upi).contains("cu=INR");
     }
@@ -122,7 +123,7 @@ class QRSessionManagerTest {
     void isActive_returnsFalseForSessionPastExpiryTime() {
         // Build a session that already expired
         QRSession expired = QRSession.builder()
-                .txnRef("TXN-EXPIRED")
+                .txnRef(new TxnRef("TXN-EXPIRED"))
                 .merchantId(MERCHANT)
                 .amount(AMOUNT)
                 .status(QRSession.Status.PENDING)

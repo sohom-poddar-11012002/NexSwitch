@@ -59,7 +59,7 @@ class GenerateQRServiceTest {
 
         assertThat(result).isInstanceOf(QRGenerationResult.Generated.class);
         QRGenerationResult.Generated generated = (QRGenerationResult.Generated) result;
-        assertThat(generated.txnRef()).startsWith("TXN");
+        assertThat(generated.txnRef().value()).startsWith("TXN");
         assertThat(generated.qrImageBase64()).isEqualTo("BASE64_PNG_DATA");
         assertThat(generated.expiresAt()).isNotNull();
     }

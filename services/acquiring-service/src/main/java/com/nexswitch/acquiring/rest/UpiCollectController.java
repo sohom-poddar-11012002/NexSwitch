@@ -1,23 +1,21 @@
 package com.nexswitch.acquiring.rest;
 
+import com.nexswitch.acquiring.rest.dto.*;
 import com.nexswitch.domain.model.CollectRequest;
 import com.nexswitch.domain.model.InitiateCollectResult;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.NpciTxnId;
 import com.nexswitch.domain.port.inbound.InitiateCollectCommand;
 import com.nexswitch.domain.port.inbound.InitiateCollectUseCase;
 import com.nexswitch.domain.port.outbound.CollectRequestPort;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Currency;
 import java.util.Optional;
 
@@ -57,7 +55,7 @@ public class UpiCollectController {
         return switch (result) {
             case InitiateCollectResult.Initiated i -> {
                 log.info("upi.collect.initiated collectId={}", i.collectId());
-                yield ResponseEntity.ok(new InitiateResponse(i.collectId(), i.expiresAt()));
+                yield ResponseEntity.ok(new InitiateResponse(i.collectId().value(), i.expiresAt()));
             }
             case InitiateCollectResult.Failed f -> {
                 log.warn("upi.collect.failed reason={}", f.reason());
@@ -78,7 +76,7 @@ public class UpiCollectController {
         }
 
         CollectRequest request = maybeRequest.get();
-        if (request.status() != CollectRequest.Status.PENDING) {
+        if (!request.isPending()) {
             return ResponseEntity.ok(new OutcomeAckResponse(req.collectId(), request.status().name()));
         }
 
@@ -86,34 +84,9 @@ public class UpiCollectController {
                 ? CollectRequest.Status.APPROVED
                 : CollectRequest.Status.REJECTED;
 
-        collectRequestPort.update(request.withStatus(newStatus).withNpciTxnId(req.npciTxnId()));
+        collectRequestPort.update(request.withStatus(newStatus).withNpciTxnId(new NpciTxnId(req.npciTxnId())));
 
         log.info("upi.collect.outcome.applied collectId={} status={}", req.collectId(), newStatus);
         return ResponseEntity.ok(new OutcomeAckResponse(req.collectId(), newStatus.name()));
     }
-
-    // ── Request / response records ────────────────────────────────────────────
-
-    record InitiateRequest(
-            @NotBlank @Size(max = 16)  String merchantId,
-            @NotBlank @Pattern(regexp = "[\\w.]+@[\\w]+", message = "must be a valid UPI VPA e.g. user@bank")
-                                       String payerVpa,
-            @NotBlank @Pattern(regexp = "\\d+\\.\\d{2}", message = "must be a decimal with 2 places e.g. 100.00")
-                                       String amount,
-            @NotBlank @Size(min = 3, max = 3, message = "must be a 3-letter ISO 4217 currency code")
-                                       String currency,
-            @NotBlank @Size(max = 64)  String orderId,
-            Integer expirySeconds
-    ) {}
-
-    record OutcomeRequest(
-            @NotBlank @Size(max = 19)  String collectId,
-            @NotBlank @Pattern(regexp = "APPROVED|REJECTED", message = "must be APPROVED or REJECTED")
-                                       String status,
-            @NotBlank @Size(max = 35)  String npciTxnId
-    ) {}
-
-    record InitiateResponse(String collectId, Instant expiresAt) {}
-    record OutcomeAckResponse(String collectId, String status) {}
-    record ErrorResponse(String reason) {}
 }

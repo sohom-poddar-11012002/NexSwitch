@@ -3,6 +3,7 @@ package com.nexswitch.domain.service;
 import com.nexswitch.domain.model.QRSession;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.TxnRef;
 
 import java.math.RoundingMode;
 import java.net.URLEncoder;
@@ -29,9 +30,9 @@ public class QRSessionManager {
 
     public QRSession create(MerchantId merchantId, Money amount, String orderId) {
         Instant now = Instant.now();
-        String txnRef = "TXN" + TIMESTAMP_FMT.format(now)
+        TxnRef txnRef = TxnRef.of("TXN" + TIMESTAMP_FMT.format(now)
                 + merchantId.value()
-                + String.format("%04d", seq.incrementAndGet() % 10_000);
+                + String.format("%04d", seq.incrementAndGet() % 10_000));
         return QRSession.builder()
                 .txnRef(txnRef)
                 .merchantId(merchantId)
@@ -50,7 +51,7 @@ public class QRSessionManager {
         return "upi://pay"
                 + "?pa=" + encode(vpa)
                 + "&pn=" + encode(payeeName)
-                + "&tr=" + encode(session.txnRef())
+                + "&tr=" + encode(session.txnRef().value())
                 + "&am=" + amount
                 + "&cu=" + session.amount().currency().getCurrencyCode();
     }

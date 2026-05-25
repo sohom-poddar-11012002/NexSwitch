@@ -1,14 +1,13 @@
 package com.nexswitch.acquiring.rest;
 
+import com.nexswitch.acquiring.rest.dto.CreditAckResponse;
+import com.nexswitch.acquiring.rest.dto.ErrorResponse;
+import com.nexswitch.acquiring.rest.dto.UpiCreditRequest;
 import com.nexswitch.domain.model.QRSession;
-import com.nexswitch.domain.model.TransactionStatus;
-import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.NpciTxnId;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +26,7 @@ public class UpiCreditController {
 
     private static final Logger log = LoggerFactory.getLogger(UpiCreditController.class);
 
-    private final QrSessionPort       qrSessionPort;
+    private final QrSessionPort        qrSessionPort;
     private final TransactionRepository transactionRepository;
 
     public UpiCreditController(QrSessionPort qrSessionPort,
@@ -45,12 +44,12 @@ public class UpiCreditController {
         if (maybeSession.isEmpty()) {
             log.warn("upi.credit.session_not_found txnRef={}", req.txnRef());
             return ResponseEntity.badRequest()
-                    .body(new QrController.ErrorResponse("QR session expired or not found: " + req.txnRef()));
+                    .body(new ErrorResponse("QR session expired or not found: " + req.txnRef()));
         }
 
         QRSession session = maybeSession.get();
 
-        if (session.status() != QRSession.Status.PENDING) {
+        if (!session.isPending()) {
             log.warn("upi.credit.duplicate_or_completed txnRef={} status={}", req.txnRef(), session.status());
             return ResponseEntity.ok(new CreditAckResponse(req.txnRef(), "ALREADY_PROCESSED"));
         }
@@ -59,23 +58,21 @@ public class UpiCreditController {
             log.warn("upi.credit.expired_session txnRef={}", req.txnRef());
             qrSessionPort.update(session.withStatus(QRSession.Status.EXPIRED));
             return ResponseEntity.badRequest()
-                    .body(new QrController.ErrorResponse("QR session expired: " + req.txnRef()));
+                    .body(new ErrorResponse("QR session expired: " + req.txnRef()));
         }
 
         // LEARN: Amount validation — compare in the same scale/rounding to avoid false mismatches.
         //        UPI credit amounts are always in INR paise-exact; BigDecimal compareTo ignores scale.
-        BigDecimal credited = new BigDecimal(req.amount());
-        if (credited.compareTo(session.amount().amount()) != 0) {
+        if (!session.amount().matches(new BigDecimal(req.amount()))) {
             log.warn("upi.credit.amount_mismatch txnRef={} expected={} received={}",
-                    req.txnRef(), session.amount().amount(), credited);
+                    req.txnRef(), session.amount().amount(), req.amount());
             return ResponseEntity.badRequest()
-                    .body(new QrController.ErrorResponse(
-                            "Amount mismatch for txnRef " + req.txnRef()));
+                    .body(new ErrorResponse("Amount mismatch for txnRef " + req.txnRef()));
         }
 
         QRSession completed = session
                 .withStatus(QRSession.Status.COMPLETED)
-                .withNpciTxnId(req.npciTxnId());
+                .withNpciTxnId(new NpciTxnId(req.npciTxnId()));
         qrSessionPort.update(completed);
         // Session auto-deletes via Redis TTL; explicit delete cleans it up immediately
         qrSessionPort.delete(req.txnRef());
@@ -83,17 +80,4 @@ public class UpiCreditController {
         log.info("upi.credit.completed txnRef={} npciTxnId={}", req.txnRef(), req.npciTxnId());
         return ResponseEntity.ok(new CreditAckResponse(req.txnRef(), "COMPLETED"));
     }
-
-    record UpiCreditRequest(
-            @NotBlank @Size(max = 35)   String npciTxnId,
-            @NotBlank @Pattern(regexp = "[\\w.]+@[\\w]+", message = "must be a valid UPI VPA e.g. user@bank")
-                                        String payerVpa,
-            @NotBlank @Pattern(regexp = "[\\w.]+@[\\w]+", message = "must be a valid UPI VPA e.g. user@bank")
-                                        String payeeVpa,
-            @NotBlank @Pattern(regexp = "\\d+\\.\\d{2}", message = "must be a decimal with 2 places e.g. 100.00")
-                                        String amount,
-            @NotBlank                   String txnRef
-    ) {}
-
-    record CreditAckResponse(String txnRef, String status) {}
 }
