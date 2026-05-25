@@ -38,7 +38,7 @@ spring:
       isolation-level: read_committed
 
 server:
-  port: 
+  port: 8100
 
 upstream:
   provider: ${UPSTREAM_PROVIDER:wiremock}

@@ -110,13 +110,15 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker compose build
-          docker compose push
-          # Also tag as latest for dev convenience
+          # docker-compose.yml has no image: keys pointing at ECR, so `docker compose push`
+          # would silently push nothing. Build and push each service image directly instead.
           for service in acquiring-service payment-switch webhook-dispatcher \
                          notification-service chargeback-service mock-upstream \
                          settlement-service reconciliation-service merchant-simulator; do
-            docker tag $ECR_REGISTRY/$service:$IMAGE_TAG $ECR_REGISTRY/$service:latest
+            docker build -t $ECR_REGISTRY/$service:$IMAGE_TAG \
+              -f services/$service/Dockerfile .
+            docker push $ECR_REGISTRY/$service:$IMAGE_TAG
+            docker tag  $ECR_REGISTRY/$service:$IMAGE_TAG $ECR_REGISTRY/$service:latest
             docker push $ECR_REGISTRY/$service:latest
           done
 

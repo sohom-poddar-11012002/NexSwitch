@@ -10,7 +10,7 @@ CREATE TABLE collect_requests (
     created_at    TIMESTAMPTZ    NOT NULL,
     expires_at    TIMESTAMPTZ    NOT NULL,
     updated_at    TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-    CONSTRAINT fk_collect_merchant FOREIGN KEY (merchant_id) REFERENCES merchants(merchant_id)
+    CONSTRAINT fk_collect_merchant FOREIGN KEY (merchant_id) REFERENCES merchants(id)
 );
 
 CREATE INDEX idx_collect_merchant ON collect_requests(merchant_id);
