@@ -2,11 +2,13 @@ package com.nexswitch.qa.rest;
 
 import com.nexswitch.qa.adapter.sse.SseEventPublisher;
 import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.UUID;
 
+@Validated
 @RestController
 @RequestMapping("/api/qa/runs")
 public class LiveStreamController {

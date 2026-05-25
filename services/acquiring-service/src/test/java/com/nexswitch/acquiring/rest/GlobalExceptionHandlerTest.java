@@ -3,6 +3,7 @@ package com.nexswitch.acquiring.rest;
 import com.nexswitch.domain.model.QRGenerationResult;
 import com.nexswitch.domain.port.inbound.GenerateQRUseCase;
 import com.nexswitch.domain.port.inbound.GenerateStaticQRUseCase;
+import com.nexswitch.domain.port.outbound.IdempotencyPort;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -29,13 +31,15 @@ class GlobalExceptionHandlerTest {
     @Mock GenerateQRUseCase       generateQRUseCase;
     @Mock GenerateStaticQRUseCase generateStaticQRUseCase;
     @Mock QrSessionPort           qrSessionPort;
+    @Mock IdempotencyPort         idempotencyPort;
 
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
+        lenient().when(idempotencyPort.acquire(any(), any())).thenReturn(true);
         mvc = MockMvcBuilders
-                .standaloneSetup(new QrController(generateQRUseCase, generateStaticQRUseCase, qrSessionPort))
+                .standaloneSetup(new QrController(generateQRUseCase, generateStaticQRUseCase, qrSessionPort, idempotencyPort))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

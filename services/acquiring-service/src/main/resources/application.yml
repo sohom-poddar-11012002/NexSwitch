@@ -138,6 +138,8 @@ resilience4j:
         maxWaitDuration: 500ms
 
 management:
+  server:
+    port: 8081
   endpoints:
     web:
       exposure:

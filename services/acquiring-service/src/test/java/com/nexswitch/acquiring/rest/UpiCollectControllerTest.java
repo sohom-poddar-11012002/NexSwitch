@@ -7,6 +7,7 @@ import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.port.inbound.InitiateCollectUseCase;
 import com.nexswitch.domain.port.outbound.CollectRequestPort;
+import com.nexswitch.domain.port.outbound.IdempotencyPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import java.util.Currency;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -33,13 +35,15 @@ class UpiCollectControllerTest {
 
     @Mock InitiateCollectUseCase initiateCollectUseCase;
     @Mock CollectRequestPort     collectRequestPort;
+    @Mock IdempotencyPort        idempotencyPort;
 
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
+        lenient().when(idempotencyPort.acquire(any(), any())).thenReturn(true);
         mvc = MockMvcBuilders
-                .standaloneSetup(new UpiCollectController(initiateCollectUseCase, collectRequestPort, ""))
+                .standaloneSetup(new UpiCollectController(initiateCollectUseCase, collectRequestPort, idempotencyPort, ""))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -127,7 +131,7 @@ class UpiCollectControllerTest {
     @Test
     void outcome_missingApiKey_returns401() throws Exception {
         MockMvc securedMvc = MockMvcBuilders
-                .standaloneSetup(new UpiCollectController(initiateCollectUseCase, collectRequestPort, "secret-key"))
+                .standaloneSetup(new UpiCollectController(initiateCollectUseCase, collectRequestPort, idempotencyPort, "secret-key"))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 

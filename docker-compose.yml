@@ -313,10 +313,14 @@ services:
       retries: 5
 
   frontend-qa-portal:
-    build: frontend/qa-portal
+    build:
+      context: frontend/qa-portal
+      # LEARN: NEXT_PUBLIC_* vars are baked at build time by Next.js webpack; passing them
+      #        as runtime `environment:` is silently ignored — they must be build args.
+      args:
+        NEXT_PUBLIC_QA_API: http://qa-orchestrator:8700
     ports: ["3003:3003"]
     environment:
-      QA_ORCHESTRATOR_URL: http://qa-orchestrator:8700
       QA_INTERNAL_API_KEY: ${QA_INTERNAL_API_KEY:-local-dev-qa-key}
     networks: [internal, public]
     depends_on:

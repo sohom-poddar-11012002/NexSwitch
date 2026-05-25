@@ -2,6 +2,7 @@ package com.nexswitch.acquiring.rest;
 
 import com.nexswitch.acquiring.rest.dto.ApiError;
 import com.nexswitch.acquiring.rest.dto.Violation;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,16 @@ public class GlobalExceptionHandler {
                 .map(fe -> new Violation(fe.getField(), fe.getDefaultMessage()))
                 .toList();
         log.debug("rest.validation_failed violations={}", violations.size());
+        return ResponseEntity.badRequest()
+                .body(new ApiError(400, "Validation Failed", null, violations));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException ex) {
+        List<Violation> violations = ex.getConstraintViolations().stream()
+                .map(cv -> new Violation(cv.getPropertyPath().toString(), cv.getMessage()))
+                .toList();
+        log.debug("rest.constraint_violation violations={}", violations.size());
         return ResponseEntity.badRequest()
                 .body(new ApiError(400, "Validation Failed", null, violations));
     }

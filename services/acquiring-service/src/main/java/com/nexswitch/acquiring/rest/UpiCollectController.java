@@ -10,21 +10,28 @@ import com.nexswitch.domain.model.vo.NpciTxnId;
 import com.nexswitch.domain.port.inbound.InitiateCollectCommand;
 import com.nexswitch.domain.port.inbound.InitiateCollectUseCase;
 import com.nexswitch.domain.port.outbound.CollectRequestPort;
+import com.nexswitch.domain.port.outbound.IdempotencyPort;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.Currency;
 import java.util.Optional;
 
 // LEARN: UPI Collect (pull payment) — merchant initiates the debit request; customer sees
 //        a push notification on their UPI app to approve or reject. The outcome arrives
 //        asynchronously via POST /upi/collect/outcome from Mock NPCI webhook.
+@Tag(name = "UPI Collect", description = "UPI pull-payment initiation and NPCI outcome callback")
+@Validated
 @RestController
 @RequestMapping("/upi/collect")
 public class UpiCollectController {
@@ -33,19 +40,31 @@ public class UpiCollectController {
 
     private final InitiateCollectUseCase initiateCollectUseCase;
     private final CollectRequestPort     collectRequestPort;
+    private final IdempotencyPort        idempotencyPort;
     private final String                 npciCallbackApiKey;
 
     public UpiCollectController(
             InitiateCollectUseCase initiateCollectUseCase,
             CollectRequestPort collectRequestPort,
+            IdempotencyPort idempotencyPort,
             @Value("${npci.callback.api-key:}") String npciCallbackApiKey) {
         this.initiateCollectUseCase = initiateCollectUseCase;
         this.collectRequestPort     = collectRequestPort;
+        this.idempotencyPort        = idempotencyPort;
         this.npciCallbackApiKey     = npciCallbackApiKey;
     }
 
+    @Operation(summary = "Initiate UPI Collect", description = "Sends a pull-payment request to the payer's UPI app")
     @PostMapping
-    public ResponseEntity<?> initiate(@Valid @RequestBody InitiateRequest req) {
+    public ResponseEntity<?> initiate(
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody InitiateRequest req) {
+        if (idempotencyKey != null && !idempotencyKey.isBlank()
+                && !idempotencyPort.acquire(idempotencyKey, Duration.ofMinutes(5))) {
+            log.info("upi.collect.duplicate_request idempotencyKey={}", idempotencyKey);
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ErrorResponse("Duplicate request"));
+        }
         log.info("upi.collect.initiate merchantId={} payerVpa={} amount={}",
                 req.merchantId(), req.payerVpa(), req.amount());
 
@@ -71,6 +90,7 @@ public class UpiCollectController {
         };
     }
 
+    @Operation(summary = "NPCI outcome callback", description = "Receives APPROVED/REJECTED outcome from NPCI/Mock-NPCI for a pending collect request")
     @PostMapping("/outcome")
     public ResponseEntity<?> outcome(
             // LEARN: Shared-secret header — the callback source (Mock NPCI / real NPCI) must

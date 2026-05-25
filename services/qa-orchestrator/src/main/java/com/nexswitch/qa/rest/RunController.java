@@ -6,12 +6,14 @@ import com.nexswitch.qa.domain.port.inbound.ResumeStepUseCase;
 import com.nexswitch.qa.domain.port.inbound.TriggerRunUseCase;
 import com.nexswitch.qa.domain.port.outbound.RunExecutionRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Validated
 @RestController
 @RequestMapping("/api/qa/runs")
 public class RunController {
