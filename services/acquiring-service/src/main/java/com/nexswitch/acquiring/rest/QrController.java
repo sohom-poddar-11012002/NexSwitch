@@ -1,5 +1,6 @@
 package com.nexswitch.acquiring.rest;
 
+import com.nexswitch.acquiring.rest.dto.*;
 import com.nexswitch.domain.model.QRGenerationResult;
 import com.nexswitch.domain.model.QRSession;
 import com.nexswitch.domain.model.StaticQRResult;
@@ -12,9 +13,6 @@ import com.nexswitch.domain.port.inbound.GenerateStaticQRUseCase;
 import com.nexswitch.domain.port.inbound.QRGenerationCommand;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -22,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Currency;
 import java.util.Optional;
 
@@ -60,8 +57,7 @@ public class QrController {
         return switch (result) {
             case QRGenerationResult.Generated g -> {
                 log.info("qr.generate.success txnRef={}", g.txnRef());
-                yield ResponseEntity.ok(new GenerateResponse(
-                        g.txnRef(), g.qrImageBase64(), g.expiresAt()));
+                yield ResponseEntity.ok(new GenerateResponse(g.txnRef(), g.qrImageBase64(), g.expiresAt()));
             }
             case QRGenerationResult.Failed f -> {
                 log.warn("qr.generate.failed reason={}", f.reason());
@@ -78,8 +74,7 @@ public class QrController {
                     .body(new ErrorResponse("QR session not found or expired: " + txnRef));
         }
         QRSession s = session.get();
-        return ResponseEntity.ok(new StatusResponse(
-                s.txnRef(), s.status().name(), s.npciTxnId(), s.expiresAt()));
+        return ResponseEntity.ok(new QrStatusResponse(s.txnRef(), s.status().name(), s.npciTxnId(), s.expiresAt()));
     }
 
     @GetMapping("/static/{merchantId}")
@@ -93,21 +88,4 @@ public class QrController {
                     .body(new ErrorResponse(f.reason()));
         };
     }
-
-    // ── Request / response records ────────────────────────────────────────────
-
-    record GenerateRequest(
-            @NotBlank @Size(max = 16)  String merchantId,
-            @NotBlank @Size(max = 16)  String terminalId,
-            @NotBlank @Pattern(regexp = "\\d+\\.\\d{2}", message = "must be a decimal with 2 places e.g. 100.00")
-                                       String amount,
-            @NotBlank @Size(min = 3, max = 3, message = "must be a 3-letter ISO 4217 currency code")
-                                       String currency,
-            @NotBlank @Size(max = 64)  String orderId
-    ) {}
-
-    record GenerateResponse(String txnRef, String qrImageBase64, Instant expiresAt) {}
-    record StaticQrResponse(String qrImageBase64, String vpa, String upiString) {}
-    record StatusResponse(String txnRef, String status, String npciTxnId, Instant expiresAt) {}
-    record ErrorResponse(String reason) {}
 }

@@ -51,7 +51,8 @@ public final class CollectRequest {
     public Instant     expiresAt()  { return expiresAt; }
     public String      npciTxnId()  { return npciTxnId; }
 
-    public boolean isExpired() { return Instant.now().isAfter(expiresAt); }
+    public boolean isExpired()  { return Instant.now().isAfter(expiresAt); }
+    public boolean isPending()  { return status == Status.PENDING; }
 
     public CollectRequest withStatus(Status newStatus) {
         return toBuilder().status(newStatus).build();

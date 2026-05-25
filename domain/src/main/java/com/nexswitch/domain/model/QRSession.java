@@ -42,9 +42,8 @@ public final class QRSession {
     public Instant expiresAt() { return expiresAt; }
     public String npciTxnId() { return npciTxnId; }
 
-    public boolean isExpired() {
-        return Instant.now().isAfter(expiresAt);
-    }
+    public boolean isExpired()  { return Instant.now().isAfter(expiresAt); }
+    public boolean isPending()  { return status == Status.PENDING; }
 
     public QRSession withStatus(Status newStatus) {
         Builder b = toBuilder();

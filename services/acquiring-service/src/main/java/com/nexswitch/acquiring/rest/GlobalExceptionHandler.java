@@ -1,5 +1,7 @@
 package com.nexswitch.acquiring.rest;
 
+import com.nexswitch.acquiring.rest.dto.ApiError;
+import com.nexswitch.acquiring.rest.dto.Violation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -50,7 +52,4 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(500, "Internal Server Error", "An unexpected error occurred", null));
     }
-
-    record ApiError(int status, String error, String message, List<Violation> violations) {}
-    record Violation(String field, String message) {}
 }
