@@ -21,14 +21,18 @@ import java.util.Map;
 @Configuration
 public class WebhookConfig {
 
-    @Value("${spring.kafka.bootstrap-servers}")
-    private String bootstrapServers;
+    private final String bootstrapServers;
+    private final String dlqTopic;
+    private final int    maxAttempts;
 
-    @Value("${webhook.dlq-topic:webhook.dlq}")
-    private String dlqTopic;
-
-    @Value("${webhook.max-attempts:5}")
-    private int maxAttempts;
+    public WebhookConfig(
+            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
+            @Value("${webhook.dlq-topic:webhook.dlq}") String dlqTopic,
+            @Value("${webhook.max-attempts:5}") int maxAttempts) {
+        this.bootstrapServers = bootstrapServers;
+        this.dlqTopic         = dlqTopic;
+        this.maxAttempts      = maxAttempts;
+    }
 
     @Bean
     public WebhookDeliveryService.HttpSender restClientHttpSender() {

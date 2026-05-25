@@ -44,6 +44,23 @@ spring:
 
 server:
   port: 8080
+  # LEARN: Unbounded POST bodies are an OOM vector — a 100MB payload can exhaust the heap
+  #        before any validation fires. Cap at 256KB: well above any valid payment request.
+  tomcat:
+    max-http-form-post-size: 262144   # 256 KB
+
+spring.servlet:
+  multipart:
+    max-file-size: 256KB
+    max-request-size: 256KB
+
+cors:
+  allowed-origins: >
+    ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003}
+
+npci:
+  callback:
+    api-key: ${NPCI_CALLBACK_API_KEY:}  # blank = check skipped (dev); set in prod/staging
 
 iso8583:
   port: 8000
