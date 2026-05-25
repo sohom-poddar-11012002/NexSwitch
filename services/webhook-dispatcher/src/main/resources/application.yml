@@ -30,7 +30,6 @@ spring:
     producer:
       acks: all
       retries: 3
-      enable-idempotence: true
       compression-type: snappy
     consumer:
       auto-offset-reset: earliest
