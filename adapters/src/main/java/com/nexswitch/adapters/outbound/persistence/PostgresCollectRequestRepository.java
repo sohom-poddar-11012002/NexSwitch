@@ -4,6 +4,7 @@ import com.nexswitch.adapters.outbound.persistence.entity.CollectRequestEntity;
 import com.nexswitch.adapters.outbound.persistence.jpa.JpaCollectRequestRepository;
 import com.nexswitch.adapters.outbound.persistence.mapper.CollectRequestMapper;
 import com.nexswitch.domain.model.CollectRequest;
+import com.nexswitch.domain.model.vo.CollectId;
 import com.nexswitch.domain.port.outbound.CollectRequestPort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +29,8 @@ public class PostgresCollectRequestRepository implements CollectRequestPort {
     }
 
     @Override
-    public Optional<CollectRequest> findByCollectId(String collectId) {
-        return jpa.findByCollectId(collectId).map(mapper::toDomain);
+    public Optional<CollectRequest> findByCollectId(CollectId collectId) {
+        return jpa.findByCollectId(collectId.value()).map(mapper::toDomain);
     }
 
     @Override
