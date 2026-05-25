@@ -66,29 +66,39 @@ public class CachingMerchantRepository implements MerchantRepository {
 
         // L2: Redis hit
         String redisKey = KEY_PREFIX + merchantId;
-        String json = redis.opsForValue().get(redisKey);
-        if (json != null) {
-            log.debug("merchant.cache.l2_hit merchantId={}", merchantId);
-            Optional<MerchantProfile> result = deserialize(json);
-            l1.put(merchantId, result);
-            return result;
+        try {
+            String json = redis.opsForValue().get(redisKey);
+            if (json != null) {
+                log.debug("merchant.cache.l2_hit merchantId={}", merchantId);
+                Optional<MerchantProfile> result = deserialize(json);
+                l1.put(merchantId, result);
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("merchant.cache.redis_down merchantId={} — falling through to DB", merchantId, e);
+            return delegate.findById(id);
         }
 
         // Cache miss — SETNX lock prevents stampede
         // LEARN: Only one thread races the DB; others fall through to delegate directly.
         //        Safe for merchant reads: the profile is deterministic and read-only here.
         String lockKey = LOCK_PREFIX + merchantId;
-        Boolean locked = redis.opsForValue().setIfAbsent(lockKey, "1", LOCK_TTL);
-        if (Boolean.TRUE.equals(locked)) {
-            try {
-                Optional<MerchantProfile> result = delegate.findById(id);
-                redis.opsForValue().set(redisKey, serialize(result), jitteredTtl());
-                l1.put(merchantId, result);
-                log.debug("merchant.cache.miss_filled merchantId={}", merchantId);
-                return result;
-            } finally {
-                redis.delete(lockKey);
+        try {
+            Boolean locked = redis.opsForValue().setIfAbsent(lockKey, "1", LOCK_TTL);
+            if (Boolean.TRUE.equals(locked)) {
+                try {
+                    Optional<MerchantProfile> result = delegate.findById(id);
+                    redis.opsForValue().set(redisKey, serialize(result), jitteredTtl());
+                    l1.put(merchantId, result);
+                    log.debug("merchant.cache.miss_filled merchantId={}", merchantId);
+                    return result;
+                } finally {
+                    redis.delete(lockKey);
+                }
             }
+        } catch (Exception e) {
+            log.warn("merchant.cache.redis_lock_failed merchantId={} — going to DB", merchantId, e);
+            return delegate.findById(id);
         }
 
         log.debug("merchant.cache.lock_contention merchantId={}", merchantId);
