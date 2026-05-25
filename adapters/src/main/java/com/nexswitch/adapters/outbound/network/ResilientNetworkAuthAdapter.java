@@ -6,6 +6,7 @@ import com.nexswitch.domain.model.Transaction;
 import com.nexswitch.domain.port.outbound.AuthorizationPort;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -23,8 +24,9 @@ public class ResilientNetworkAuthAdapter implements AuthorizationPort {
 
     private static final Logger log = LoggerFactory.getLogger(ResilientNetworkAuthAdapter.class);
 
-    private static final String CB_NAME = "network";
-    private static final String BH_NAME = "network";
+    private static final String CB_NAME      = "network";
+    private static final String BH_NAME      = "network";
+    private static final String RETRY_NAME   = "networkAuth";
     private static final String RC_SWITCH_INOP = "91";
 
     private final AuthorizationPort delegate;
@@ -34,6 +36,10 @@ public class ResilientNetworkAuthAdapter implements AuthorizationPort {
         this.delegate = delegate;
     }
 
+    // LEARN: Retry wraps CircuitBreaker (inner-to-outer: CB > Retry > Bulkhead per Resilience4j
+    //        aspect order). Transient timeouts are retried once; if both attempts fail the CB
+    //        records the failure. When CB opens, authorizeFallback fires immediately (no retry).
+    @Retry(name = RETRY_NAME)
     @CircuitBreaker(name = CB_NAME, fallbackMethod = "authorizeFallback")
     @Bulkhead(name = BH_NAME, type = Bulkhead.Type.SEMAPHORE)
     @Override
@@ -41,6 +47,7 @@ public class ResilientNetworkAuthAdapter implements AuthorizationPort {
         return delegate.authorize(transaction);
     }
 
+    @Retry(name = RETRY_NAME)
     @CircuitBreaker(name = CB_NAME, fallbackMethod = "reverseFallback")
     @Bulkhead(name = BH_NAME, type = Bulkhead.Type.SEMAPHORE)
     @Override

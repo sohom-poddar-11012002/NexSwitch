@@ -86,6 +86,16 @@ qr:
     ttl-minutes: 5
 
 resilience4j:
+  retry:
+    instances:
+      networkAuth:
+        # LEARN: maxAttempts=2 means one initial try + one retry — avoids hammering a
+        #        struggling upstream while still recovering from transient TCP timeouts.
+        maxAttempts: 2
+        waitDuration: 200ms
+        retryExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
   circuitbreaker:
     instances:
       hsm:
@@ -93,11 +103,16 @@ resilience4j:
         #        avoids false trips during low-traffic periods where 1 failure = 100%.
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
-        failureRateThreshold: 50
+        # LEARN: 25% threshold — 50% was too permissive for HSM; one bad batch of 5/10
+        #        calls should open the circuit, not 50/100. Industry standard for payments
+        #        hardware is 20–30%.
+        failureRateThreshold: 25
         # slowCallDurationThreshold marks HSM calls >500ms as "slow" — treated as failures
         slowCallDurationThreshold: 500ms
         slowCallRateThreshold: 80
-        waitDurationInOpenState: 30s
+        # LEARN: 10s open state for HSM — 30s meant 30s of failed authorizations; 10s
+        #        allows faster recovery while still giving the HSM time to stabilise.
+        waitDurationInOpenState: 10s
         # LEARN: half-open probe — only 3 test calls allowed before circuit decides to
         #        close or re-open; prevents re-triggering the open state on recovery.
         permittedNumberOfCallsInHalfOpenState: 3
@@ -105,7 +120,7 @@ resilience4j:
       network:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 20
-        failureRateThreshold: 50
+        failureRateThreshold: 25
         slowCallDurationThreshold: 15s
         slowCallRateThreshold: 50
         waitDurationInOpenState: 60s

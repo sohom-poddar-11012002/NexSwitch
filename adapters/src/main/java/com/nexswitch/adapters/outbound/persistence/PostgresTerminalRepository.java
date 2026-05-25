@@ -12,7 +12,7 @@ import java.util.Optional;
 
 // LEARN: StringPK — TerminalEntity uses a String ID (ISO 8583 Field 41, 8-char terminal ID),
 //        so JPA findById() accepts String directly; no numeric surrogate key involved.
-@Repository
+@Repository("postgresTerminalRepository")
 public class PostgresTerminalRepository implements TerminalRepository {
 
     private final JpaTerminalRepository jpa;

@@ -61,12 +61,19 @@ public class CachingBinLookupAdapter implements BinLookupPort {
 
         // L2: Redis hit
         String redisKey = KEY_PREFIX + bin6;
-        String json = redis.opsForValue().get(redisKey);
-        if (json != null) {
-            log.debug("bin.cache.l2_hit bin6={}", bin6);
-            Optional<BinInfo> result = deserialize(json);
-            l1.put(bin6, result);
-            return result;
+        try {
+            String json = redis.opsForValue().get(redisKey);
+            if (json != null) {
+                log.debug("bin.cache.l2_hit bin6={}", bin6);
+                Optional<BinInfo> result = deserialize(json);
+                l1.put(bin6, result);
+                return result;
+            }
+        } catch (Exception e) {
+            // LEARN: Redis fallback — a Redis outage must not take down the auth path.
+            //        One Postgres read per request is acceptable in degraded mode.
+            log.warn("bin.cache.redis_down bin6={} — falling through to DB", bin6, e);
+            return delegate.lookup(bin6);
         }
 
         // Cache miss — acquire distributed lock to prevent cache stampede
@@ -74,17 +81,22 @@ public class CachingBinLookupAdapter implements BinLookupPort {
         //        Only the thread that wins the SETNX races the DB; all others fall through to
         //        the delegate directly (safe here — BIN lookups are deterministic reads).
         String lockKey = LOCK_PREFIX + bin6;
-        Boolean locked = redis.opsForValue().setIfAbsent(lockKey, "1", LOCK_TTL);
-        if (Boolean.TRUE.equals(locked)) {
-            try {
-                Optional<BinInfo> result = delegate.lookup(bin6);
-                redis.opsForValue().set(redisKey, serialize(result), jitteredTtl());
-                l1.put(bin6, result);
-                log.debug("bin.cache.miss_filled bin6={}", bin6);
-                return result;
-            } finally {
-                redis.delete(lockKey);
+        try {
+            Boolean locked = redis.opsForValue().setIfAbsent(lockKey, "1", LOCK_TTL);
+            if (Boolean.TRUE.equals(locked)) {
+                try {
+                    Optional<BinInfo> result = delegate.lookup(bin6);
+                    redis.opsForValue().set(redisKey, serialize(result), jitteredTtl());
+                    l1.put(bin6, result);
+                    log.debug("bin.cache.miss_filled bin6={}", bin6);
+                    return result;
+                } finally {
+                    redis.delete(lockKey);
+                }
             }
+        } catch (Exception e) {
+            log.warn("bin.cache.redis_lock_failed bin6={} — going to DB", bin6, e);
+            return delegate.lookup(bin6);
         }
 
         // Lock contention — another thread is fetching; go straight to delegate
