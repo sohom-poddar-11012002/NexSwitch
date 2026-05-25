@@ -44,6 +44,7 @@ class KafkaAssertionAdapterTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>(
                 "authorization-events", 0, 10L, "key",
                 "{\"eventType\":\"AUTHORIZATION_APPROVED\",\"transactionId\":\"tx-1\"}");
+        @SuppressWarnings("deprecation")
         ConsumerRecords<String, String> records = new ConsumerRecords<>(Map.of(tp, List.of(record)));
 
         when(consumer.assignment()).thenReturn(java.util.Set.of(tp));
