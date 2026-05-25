@@ -39,7 +39,7 @@ class UpiCollectControllerTest {
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders
-                .standaloneSetup(new UpiCollectController(initiateCollectUseCase, collectRequestPort))
+                .standaloneSetup(new UpiCollectController(initiateCollectUseCase, collectRequestPort, ""))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -122,5 +122,20 @@ class UpiCollectControllerTest {
                         """))
            .andExpect(status().isBadRequest())
            .andExpect(jsonPath("$.reason").value("CollectRequest not found: COLNOTEXIST"));
+    }
+
+    @Test
+    void outcome_missingApiKey_returns401() throws Exception {
+        MockMvc securedMvc = MockMvcBuilders
+                .standaloneSetup(new UpiCollectController(initiateCollectUseCase, collectRequestPort, "secret-key"))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        securedMvc.perform(post("/upi/collect/outcome")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"collectId":"COL1234567890ABCDEF","status":"APPROVED","npciTxnId":"NPCI999"}
+                        """))
+           .andExpect(status().isUnauthorized());
     }
 }
