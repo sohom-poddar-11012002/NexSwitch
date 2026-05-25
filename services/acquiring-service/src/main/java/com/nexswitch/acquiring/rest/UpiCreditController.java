@@ -4,6 +4,7 @@ import com.nexswitch.acquiring.rest.dto.CreditAckResponse;
 import com.nexswitch.acquiring.rest.dto.ErrorResponse;
 import com.nexswitch.acquiring.rest.dto.UpiCreditRequest;
 import com.nexswitch.domain.model.QRSession;
+import com.nexswitch.domain.model.vo.NpciTxnId;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
 import jakarta.validation.Valid;
@@ -71,7 +72,7 @@ public class UpiCreditController {
 
         QRSession completed = session
                 .withStatus(QRSession.Status.COMPLETED)
-                .withNpciTxnId(req.npciTxnId());
+                .withNpciTxnId(new NpciTxnId(req.npciTxnId()));
         qrSessionPort.update(completed);
         // Session auto-deletes via Redis TTL; explicit delete cleans it up immediately
         qrSessionPort.delete(req.txnRef());

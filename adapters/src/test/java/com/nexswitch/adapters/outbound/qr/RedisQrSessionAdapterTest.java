@@ -3,6 +3,8 @@ package com.nexswitch.adapters.outbound.qr;
 import com.nexswitch.domain.model.QRSession;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.NpciTxnId;
+import com.nexswitch.domain.model.vo.TxnRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -85,7 +87,7 @@ class RedisQrSessionAdapterTest {
         Optional<QRSession> found = adapter.findByTxnRef("TXN002");
 
         assertThat(found).isPresent();
-        assertThat(found.get().txnRef()).isEqualTo("TXN002");
+        assertThat(found.get().txnRef()).isEqualTo(new TxnRef("TXN002"));
         assertThat(found.get().merchantId()).isEqualTo(MERCH);
         assertThat(found.get().amount().amount()).isEqualByComparingTo("6000.00");
         assertThat(found.get().status()).isEqualTo(QRSession.Status.PENDING);
@@ -95,7 +97,7 @@ class RedisQrSessionAdapterTest {
     void update_overwritesExistingKey() {
         QRSession original = pendingSession("TXN003", Instant.now().plusSeconds(200));
         QRSession completed = original.withStatus(QRSession.Status.COMPLETED)
-                .withNpciTxnId("NPCI123");
+                .withNpciTxnId(new NpciTxnId("NPCI123"));
 
         adapter.update(completed);
 
@@ -113,7 +115,7 @@ class RedisQrSessionAdapterTest {
 
     private QRSession pendingSession(String txnRef, Instant expiresAt) {
         return QRSession.builder()
-                .txnRef(txnRef)
+                .txnRef(new TxnRef(txnRef))
                 .merchantId(MERCH)
                 .amount(Money.of(new BigDecimal("6000.00"), INR))
                 .status(QRSession.Status.PENDING)

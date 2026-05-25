@@ -2,6 +2,7 @@ package com.nexswitch.acquiring.rest;
 
 import com.nexswitch.domain.model.CollectRequest;
 import com.nexswitch.domain.model.InitiateCollectResult;
+import com.nexswitch.domain.model.vo.CollectId;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.port.inbound.InitiateCollectUseCase;
@@ -46,7 +47,7 @@ class UpiCollectControllerTest {
     @Test
     void validInitiate_returns200WithCollectId() throws Exception {
         when(initiateCollectUseCase.execute(any()))
-                .thenReturn(new InitiateCollectResult.Initiated("COL1234567890ABCDEF",
+                .thenReturn(new InitiateCollectResult.Initiated(new CollectId("COL1234567890ABCDEF"),
                         Instant.now().plusSeconds(180)));
 
         mvc.perform(post("/upi/collect")
@@ -88,7 +89,7 @@ class UpiCollectControllerTest {
     @Test
     void outcome_approves_pendingCollect() throws Exception {
         CollectRequest pending = CollectRequest.builder()
-                .collectId("COL1234567890ABCDEF")
+                .collectId(new CollectId("COL1234567890ABCDEF"))
                 .merchantId(new MerchantId("MERCH0000999"))
                 .payerVpa("customer@upi")
                 .amount(Money.of(new BigDecimal("500.00"), Currency.getInstance("INR")))

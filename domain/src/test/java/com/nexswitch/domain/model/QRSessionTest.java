@@ -2,6 +2,7 @@ package com.nexswitch.domain.model;
 
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.TxnRef;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -16,7 +17,7 @@ class QRSessionTest {
     @Test
     void createsQRSessionWithRequiredFields() {
         QRSession session = QRSession.builder()
-            .txnRef("TXN20260511MERCH0000999001")
+            .txnRef(new TxnRef("TXN20260511MERCH0000999001"))
             .merchantId(MerchantId.of("MERCH0000999"))
             .amount(Money.of("6000.00", INR))
             .status(QRSession.Status.PENDING)
@@ -24,14 +25,14 @@ class QRSessionTest {
             .expiresAt(Instant.now().plusSeconds(300))
             .build();
 
-        assertThat(session.txnRef()).isEqualTo("TXN20260511MERCH0000999001");
+        assertThat(session.txnRef().value()).isEqualTo("TXN20260511MERCH0000999001");
         assertThat(session.status()).isEqualTo(QRSession.Status.PENDING);
     }
 
     @Test
     void isExpiredWhenExpiryInPast() {
         QRSession session = QRSession.builder()
-            .txnRef("TXN20260511MERCH0000999001")
+            .txnRef(new TxnRef("TXN20260511MERCH0000999001"))
             .merchantId(MerchantId.of("MERCH0000999"))
             .amount(Money.of("500.00", INR))
             .status(QRSession.Status.PENDING)
@@ -45,7 +46,7 @@ class QRSessionTest {
     @Test
     void isNotExpiredWhenExpiryInFuture() {
         QRSession session = QRSession.builder()
-            .txnRef("TXN20260511MERCH0000999001")
+            .txnRef(new TxnRef("TXN20260511MERCH0000999001"))
             .merchantId(MerchantId.of("MERCH0000999"))
             .amount(Money.of("500.00", INR))
             .status(QRSession.Status.PENDING)
@@ -59,7 +60,7 @@ class QRSessionTest {
     @Test
     void withStatusReturnsNewInstance() {
         QRSession original = QRSession.builder()
-            .txnRef("TXN20260511MERCH0000999001")
+            .txnRef(new TxnRef("TXN20260511MERCH0000999001"))
             .merchantId(MerchantId.of("MERCH0000999"))
             .amount(Money.of("500.00", INR))
             .status(QRSession.Status.PENDING)

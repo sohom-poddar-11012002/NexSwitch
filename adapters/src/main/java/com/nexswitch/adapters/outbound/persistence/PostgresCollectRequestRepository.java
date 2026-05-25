@@ -33,10 +33,10 @@ public class PostgresCollectRequestRepository implements CollectRequestPort {
 
     @Override
     public void update(CollectRequest request) {
-        CollectRequestEntity entity = jpa.findByCollectId(request.collectId())
+        CollectRequestEntity entity = jpa.findByCollectId(request.collectId().value())
                 .orElseThrow(() -> new IllegalArgumentException("CollectRequest not found: " + request.collectId()));
         entity.setStatus(request.status().name());
-        entity.setNpciTxnId(request.npciTxnId());
+        entity.setNpciTxnId(request.npciTxnId() != null ? request.npciTxnId().value() : null);
         jpa.save(entity);
     }
 }

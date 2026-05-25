@@ -57,7 +57,7 @@ public class QrController {
         return switch (result) {
             case QRGenerationResult.Generated g -> {
                 log.info("qr.generate.success txnRef={}", g.txnRef());
-                yield ResponseEntity.ok(new GenerateResponse(g.txnRef(), g.qrImageBase64(), g.expiresAt()));
+                yield ResponseEntity.ok(new GenerateResponse(g.txnRef().value(), g.qrImageBase64(), g.expiresAt()));
             }
             case QRGenerationResult.Failed f -> {
                 log.warn("qr.generate.failed reason={}", f.reason());
@@ -74,7 +74,11 @@ public class QrController {
                     .body(new ErrorResponse("QR session not found or expired: " + txnRef));
         }
         QRSession s = session.get();
-        return ResponseEntity.ok(new QrStatusResponse(s.txnRef(), s.status().name(), s.npciTxnId(), s.expiresAt()));
+        return ResponseEntity.ok(new QrStatusResponse(
+                s.txnRef().value(),
+                s.status().name(),
+                s.npciTxnId() != null ? s.npciTxnId().value() : null,
+                s.expiresAt()));
     }
 
     @GetMapping("/static/{merchantId}")

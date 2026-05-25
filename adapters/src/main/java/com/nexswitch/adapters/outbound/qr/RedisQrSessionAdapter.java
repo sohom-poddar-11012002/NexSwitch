@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexswitch.domain.model.QRSession;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.NpciTxnId;
+import com.nexswitch.domain.model.vo.TxnRef;
 import com.nexswitch.domain.port.outbound.QrSessionPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +40,7 @@ public class RedisQrSessionAdapter implements QrSessionPort {
     public void save(QRSession session) {
         Duration ttl = Duration.between(Instant.now(), session.expiresAt());
         if (ttl.isNegative() || ttl.isZero()) return;
-        redis.opsForValue().set(key(session.txnRef()), serialize(session), ttl);
+        redis.opsForValue().set(key(session.txnRef().value()), serialize(session), ttl);
         log.debug("qr.session.saved txnRef={} ttlSeconds={}", session.txnRef(), ttl.toSeconds());
     }
 
@@ -71,14 +73,14 @@ public class RedisQrSessionAdapter implements QrSessionPort {
     private String serialize(QRSession session) {
         try {
             return mapper.writeValueAsString(new SessionDto(
-                    session.txnRef(),
+                    session.txnRef().value(),
                     session.merchantId().value(),
                     session.amount().amount().toPlainString(),
                     session.amount().currency().getCurrencyCode(),
                     session.status().name(),
                     session.createdAt().toEpochMilli(),
                     session.expiresAt().toEpochMilli(),
-                    session.npciTxnId()
+                    session.npciTxnId() != null ? session.npciTxnId().value() : null
             ));
         } catch (Exception e) {
             throw new IllegalStateException("QR session serialization failed", e);
@@ -89,14 +91,14 @@ public class RedisQrSessionAdapter implements QrSessionPort {
         try {
             SessionDto dto = mapper.readValue(json, SessionDto.class);
             return QRSession.builder()
-                    .txnRef(dto.txnRef)
+                    .txnRef(new TxnRef(dto.txnRef))
                     .merchantId(new MerchantId(dto.merchantId))
                     .amount(Money.of(new BigDecimal(dto.amount),
                             Currency.getInstance(dto.currency)))
                     .status(QRSession.Status.valueOf(dto.status))
                     .createdAt(Instant.ofEpochMilli(dto.createdAtEpochMs))
                     .expiresAt(Instant.ofEpochMilli(dto.expiresAtEpochMs))
-                    .npciTxnId(dto.npciTxnId)
+                    .npciTxnId(dto.npciTxnId != null ? new NpciTxnId(dto.npciTxnId) : null)
                     .build();
         } catch (Exception e) {
             throw new IllegalStateException("QR session deserialization failed", e);

@@ -5,6 +5,7 @@ import com.nexswitch.domain.model.CollectRequest;
 import com.nexswitch.domain.model.InitiateCollectResult;
 import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
+import com.nexswitch.domain.model.vo.NpciTxnId;
 import com.nexswitch.domain.port.inbound.InitiateCollectCommand;
 import com.nexswitch.domain.port.inbound.InitiateCollectUseCase;
 import com.nexswitch.domain.port.outbound.CollectRequestPort;
@@ -54,7 +55,7 @@ public class UpiCollectController {
         return switch (result) {
             case InitiateCollectResult.Initiated i -> {
                 log.info("upi.collect.initiated collectId={}", i.collectId());
-                yield ResponseEntity.ok(new InitiateResponse(i.collectId(), i.expiresAt()));
+                yield ResponseEntity.ok(new InitiateResponse(i.collectId().value(), i.expiresAt()));
             }
             case InitiateCollectResult.Failed f -> {
                 log.warn("upi.collect.failed reason={}", f.reason());
@@ -83,7 +84,7 @@ public class UpiCollectController {
                 ? CollectRequest.Status.APPROVED
                 : CollectRequest.Status.REJECTED;
 
-        collectRequestPort.update(request.withStatus(newStatus).withNpciTxnId(req.npciTxnId()));
+        collectRequestPort.update(request.withStatus(newStatus).withNpciTxnId(new NpciTxnId(req.npciTxnId())));
 
         log.info("upi.collect.outcome.applied collectId={} status={}", req.collectId(), newStatus);
         return ResponseEntity.ok(new OutcomeAckResponse(req.collectId(), newStatus.name()));

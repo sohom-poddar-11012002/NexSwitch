@@ -66,7 +66,7 @@ class InitiateCollectServiceTest {
 
         assertThat(result).isInstanceOf(InitiateCollectResult.Initiated.class);
         InitiateCollectResult.Initiated i = (InitiateCollectResult.Initiated) result;
-        assertThat(i.collectId()).startsWith("COL");
+        assertThat(i.collectId().value()).startsWith("COL");
         assertThat(i.expiresAt()).isAfter(java.time.Instant.now());
     }
 
@@ -103,8 +103,8 @@ class InitiateCollectServiceTest {
         InitiateCollectResult r1 = service.execute(command());
         InitiateCollectResult r2 = service.execute(command());
 
-        String id1 = ((InitiateCollectResult.Initiated) r1).collectId();
-        String id2 = ((InitiateCollectResult.Initiated) r2).collectId();
+        String id1 = ((InitiateCollectResult.Initiated) r1).collectId().value();
+        String id2 = ((InitiateCollectResult.Initiated) r2).collectId().value();
         assertThat(id1).isNotEqualTo(id2);
     }
 
