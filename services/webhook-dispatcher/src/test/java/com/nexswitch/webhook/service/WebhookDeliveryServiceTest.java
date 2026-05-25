@@ -11,12 +11,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.util.Currency;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,9 +31,10 @@ import static org.mockito.Mockito.lenient;
 @ExtendWith(MockitoExtension.class)
 class WebhookDeliveryServiceTest {
 
-    @Mock MerchantRepository            merchantRepository;
-    @Mock JpaWebhookDeliveryRepository  deliveryRepository;
-    @Mock WebhookDeliveryService.HttpSender httpSender;
+    @Mock MerchantRepository                 merchantRepository;
+    @Mock JpaWebhookDeliveryRepository       deliveryRepository;
+    @Mock WebhookDeliveryService.HttpSender  httpSender;
+    @Captor ArgumentCaptor<Map<String, String>> headersCaptor;
 
     WebhookDeliveryService service;
 
@@ -138,7 +141,6 @@ class WebhookDeliveryServiceTest {
 
         service.dispatch(MERCHANT_ID, "transaction.authorized", "{\"id\":\"abc\"}");
 
-        ArgumentCaptor<java.util.Map<String, String>> headersCaptor = ArgumentCaptor.forClass(java.util.Map.class);
         verify(httpSender).post(eq(WEBHOOK_URL), any(), headersCaptor.capture());
         assertThat(headersCaptor.getValue()).containsKey("X-Idempotency-Key");
         assertThat(headersCaptor.getValue()).containsKey("X-NexSwitch-Signature");
