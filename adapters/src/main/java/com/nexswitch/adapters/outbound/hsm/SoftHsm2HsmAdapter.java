@@ -70,6 +70,14 @@ public class SoftHsm2HsmAdapter implements HsmPort {
         }
     }
 
+    @Override
+    public boolean ping() {
+        // LEARN: session != null means @PostConstruct connected successfully — the PKCS#11 slot
+        //        is open. A null session means startup failed; return false rather than throwing
+        //        so the health check reports DOWN without crashing the actuator endpoint.
+        return session != null && session.isOpen();
+    }
+
     // ─── Step 1: DUKPT decrypt — Field 52 under transaction key → plaintext PIN block ─
 
     // LEARN: DUKPT two-step: (1) derive transaction key from BDK+KSN inside HSM; (2) use that

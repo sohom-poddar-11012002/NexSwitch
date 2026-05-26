@@ -12,6 +12,11 @@ import org.springframework.stereotype.Component;
 public class MockHsmAdapter implements HsmPort {
 
     @Override
+    public boolean ping() {
+        return true;
+    }
+
+    @Override
     public String dukptDecrypt(byte[] encryptedPinBlock, byte[] ksn) {
         return "mock-pin-handle";
     }

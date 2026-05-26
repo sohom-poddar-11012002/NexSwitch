@@ -148,4 +148,4 @@ management:
         liveness:
           include: livenessState
         readiness:
-          include: readinessState,db,redis
+          include: readinessState,db,redis,hsmHealthIndicator,kafkaCustomHealthIndicator

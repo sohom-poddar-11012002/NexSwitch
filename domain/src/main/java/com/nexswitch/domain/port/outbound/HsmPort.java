@@ -5,6 +5,9 @@ import com.nexswitch.domain.model.vo.PanHash;
 // LEARN: SecurityBoundary — all HSM operations defined here; domain knows operations, not key handles
 public interface HsmPort {
 
+    // Lightweight liveness check — returns true if the HSM slot is open and reachable.
+    boolean ping();
+
     // Step 1 of the DUKPT two-step: derive terminal transaction key from BDK + KSN,
     // decrypt Field 52 (DUKPT-encrypted PIN block) → plaintext PIN block stays inside HSM.
     // Returns an opaque session handle referencing the decrypted PIN block in HSM memory.

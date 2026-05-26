@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Local / dev: human-readable, traceId in brackets for easy grep -->
+    <springProfile name="!prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- LEARN: %X{key} reads from MDC — MDC is per-thread, populated by MdcRequestFilter.
+                             The [] shows blank when no request context (startup, background jobs). -->
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- Production: structured JSON — all MDC keys become top-level fields for ELK / Datadog -->
+    <springProfile name="prod">
+        <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <!-- LEARN: LogstashEncoder serialises every log event as a single JSON line.
+                        All MDC keys (traceId, requestId, transactionId, merchantId, cardLast4)
+                        appear as top-level fields so Kibana/Datadog can filter by them without
+                        regex parsing. One line per event = no multi-line parsing headaches. -->
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeCallerData>false</includeCallerData>
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>20</maxDepthPerThrowable>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON_STDOUT"/>
+        </root>
+    </springProfile>
+
+</configuration>
