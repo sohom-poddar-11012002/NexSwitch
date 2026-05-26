@@ -2,6 +2,13 @@ spring:
   application:
     name: webhook-dispatcher
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  threads:
+    virtual:
+      enabled: true
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/nexswitch}
     username: ${DB_USERNAME:nexswitch_app}
@@ -10,6 +17,9 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 2
       connection-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
 
   jpa:
     hibernate:
@@ -35,9 +45,13 @@ spring:
       auto-offset-reset: earliest
       enable-auto-commit: false
       isolation-level: read_committed
+      max-poll-records: 100
+      properties:
+        max.poll.interval.ms: 300000
 
 server:
   port: 8085
+  shutdown: graceful
 
 webhook:
   max-attempts: 5
