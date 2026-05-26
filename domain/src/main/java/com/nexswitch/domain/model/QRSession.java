@@ -5,6 +5,7 @@ import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.model.vo.NpciTxnId;
 import com.nexswitch.domain.model.vo.TxnRef;
 
+import java.time.Clock;
 import java.time.Instant;
 
 // LEARN: DomainTTL — expiresAt is a domain concept; Redis TTL is an implementation detail of the adapter
@@ -43,7 +44,8 @@ public final class QRSession {
     public Instant    expiresAt()  { return expiresAt; }
     public NpciTxnId  npciTxnId()  { return npciTxnId; }
 
-    public boolean isExpired()  { return Instant.now().isAfter(expiresAt); }
+    public boolean isExpired()              { return isExpired(Clock.systemUTC()); }
+    public boolean isExpired(Clock clock)   { return Instant.now(clock).isAfter(expiresAt); }
     public boolean isPending()  { return status == Status.PENDING; }
 
     public QRSession withStatus(Status newStatus) {

@@ -54,7 +54,7 @@ final class EmvTlvParser {
     }
 
     private static Map<Integer, byte[]> parseTlv(byte[] data) {
-        Map<Integer, byte[]> result = new HashMap<>();
+        Map<Integer, byte[]> result = new HashMap<>(64);
         int i = 0;
         while (i < data.length) {
             // Parse tag (1 or 2 bytes)

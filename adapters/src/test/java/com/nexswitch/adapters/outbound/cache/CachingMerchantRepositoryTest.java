@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.Optional;
@@ -37,7 +38,7 @@ class CachingMerchantRepositoryTest {
     @BeforeEach
     void setUp() {
         when(redis.opsForValue()).thenReturn(valueOps);
-        repo = new CachingMerchantRepository(delegate, redis);
+        repo = new CachingMerchantRepository(delegate, redis, new ObjectMapper());
     }
 
     @Test

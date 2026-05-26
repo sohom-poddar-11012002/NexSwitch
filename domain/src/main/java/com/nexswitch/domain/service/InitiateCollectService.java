@@ -10,6 +10,7 @@ import com.nexswitch.domain.port.outbound.CollectRequestPort;
 import com.nexswitch.domain.port.outbound.MerchantRepository;
 import com.nexswitch.domain.port.outbound.UpiPspNotifier;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,13 +23,22 @@ public class InitiateCollectService implements InitiateCollectUseCase {
     private final MerchantRepository merchantRepository;
     private final CollectRequestPort collectRequestPort;
     private final UpiPspNotifier     upiPspNotifier;
+    private final Clock              clock;
 
     public InitiateCollectService(MerchantRepository merchantRepository,
                                   CollectRequestPort collectRequestPort,
                                   UpiPspNotifier upiPspNotifier) {
+        this(merchantRepository, collectRequestPort, upiPspNotifier, Clock.systemUTC());
+    }
+
+    public InitiateCollectService(MerchantRepository merchantRepository,
+                                  CollectRequestPort collectRequestPort,
+                                  UpiPspNotifier upiPspNotifier,
+                                  Clock clock) {
         this.merchantRepository = merchantRepository;
         this.collectRequestPort = collectRequestPort;
         this.upiPspNotifier     = upiPspNotifier;
+        this.clock              = clock;
     }
 
     @Override
@@ -43,7 +53,7 @@ public class InitiateCollectService implements InitiateCollectUseCase {
             return new InitiateCollectResult.Failed("Merchant account is not active");
         }
 
-        Instant now      = Instant.now();
+        Instant now      = Instant.now(clock);
         Instant expiresAt = now.plusSeconds(command.expirySeconds());
         CollectId collectId = CollectId.of("COL" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
 

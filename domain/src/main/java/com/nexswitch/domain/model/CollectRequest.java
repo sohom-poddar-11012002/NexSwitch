@@ -5,6 +5,7 @@ import com.nexswitch.domain.model.vo.MerchantId;
 import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.model.vo.NpciTxnId;
 
+import java.time.Clock;
 import java.time.Instant;
 
 // LEARN: UPI Collect (pull) — merchant initiates a debit request to a customer VPA; customer
@@ -53,7 +54,8 @@ public final class CollectRequest {
     public Instant    expiresAt()  { return expiresAt; }
     public NpciTxnId  npciTxnId()  { return npciTxnId; }
 
-    public boolean isExpired()  { return Instant.now().isAfter(expiresAt); }
+    public boolean isExpired()             { return isExpired(Clock.systemUTC()); }
+    public boolean isExpired(Clock clock)  { return Instant.now(clock).isAfter(expiresAt); }
     public boolean isPending()  { return status == Status.PENDING; }
 
     public CollectRequest withStatus(Status newStatus) {

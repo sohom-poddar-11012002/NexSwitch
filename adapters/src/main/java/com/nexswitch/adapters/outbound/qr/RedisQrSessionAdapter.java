@@ -31,9 +31,9 @@ public class RedisQrSessionAdapter implements QrSessionPort {
     private final StringRedisTemplate redis;
     private final ObjectMapper mapper;
 
-    public RedisQrSessionAdapter(StringRedisTemplate redis) {
+    public RedisQrSessionAdapter(StringRedisTemplate redis, ObjectMapper mapper) {
         this.redis = redis;
-        this.mapper = new ObjectMapper();
+        this.mapper = mapper;
     }
 
     @Override
@@ -83,6 +83,7 @@ public class RedisQrSessionAdapter implements QrSessionPort {
                     session.npciTxnId() != null ? session.npciTxnId().value() : null
             ));
         } catch (Exception e) {
+            log.warn("qr.session.serialize_fail txnRef={}", session.txnRef(), e);
             throw new IllegalStateException("QR session serialization failed", e);
         }
     }

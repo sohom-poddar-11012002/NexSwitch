@@ -205,7 +205,7 @@ class RoutingEngineTest {
 
     @Test
     void nullRules_throwsNullPointerException() {
-        assertThatThrownBy(() -> engine.route("4111111111111111", null))
+        assertThatThrownBy(() -> engine.route("4111111111111111", (List<RoutingRule>) null))
             .isInstanceOf(NullPointerException.class);
     }
 

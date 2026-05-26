@@ -7,6 +7,7 @@ import com.nexswitch.domain.port.inbound.ProcessPaymentUseCase;
 import com.nexswitch.domain.port.outbound.*;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -48,6 +49,7 @@ public class AuthorizationService implements ProcessPaymentUseCase {
     private final AuthorizationPort     authorizationPort;
     private final TransactionRepository transactionRepository;
     private final TransactionStateMachine stateMachine;
+    private final Clock clock;
 
     public AuthorizationService(
             BinLookupPort binLookupPort,
@@ -59,6 +61,22 @@ public class AuthorizationService implements ProcessPaymentUseCase {
             AuthorizationPort authorizationPort,
             TransactionRepository transactionRepository,
             TransactionStateMachine stateMachine) {
+        this(binLookupPort, idempotencyPort, terminalRepository, merchantRepository,
+             hsmPort, fraudScoringPort, authorizationPort, transactionRepository,
+             stateMachine, Clock.systemUTC());
+    }
+
+    public AuthorizationService(
+            BinLookupPort binLookupPort,
+            IdempotencyPort idempotencyPort,
+            TerminalRepository terminalRepository,
+            MerchantRepository merchantRepository,
+            HsmPort hsmPort,
+            FraudScoringPort fraudScoringPort,
+            AuthorizationPort authorizationPort,
+            TransactionRepository transactionRepository,
+            TransactionStateMachine stateMachine,
+            Clock clock) {
         this.binLookupPort         = binLookupPort;
         this.idempotencyPort       = idempotencyPort;
         this.terminalRepository    = terminalRepository;
@@ -68,6 +86,7 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         this.authorizationPort     = authorizationPort;
         this.transactionRepository = transactionRepository;
         this.stateMachine          = stateMachine;
+        this.clock                 = clock;
     }
 
     @Override
@@ -110,7 +129,7 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         Transaction txn = Transaction.initiate(
                 cmd.transactionId(), cmd.merchantId(), cmd.terminalId(),
                 cmd.amount(), cmd.network(), cmd.paymentMethod(),
-                cmd.panHash(), cmd.stan(), Instant.now());
+                cmd.panHash(), cmd.stan(), Instant.now(clock));
         txn = transactionRepository.save(txn);
 
         // ── Step 6a: DUKPT PIN block translation ──────────────────────────
@@ -150,7 +169,7 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         //        Blocking on ML timeout would degrade auth success rate, hurting merchants more than fraud.
         FraudScoringContext fraudCtx = new FraudScoringContext(
                 cmd.panHash(), cmd.amount(), merchant.mcc(),
-                cmd.network(), cmd.paymentMethod(), Instant.now());
+                cmd.network(), cmd.paymentMethod(), Instant.now(clock));
         Optional<BigDecimal> score = fraudScoringPort.score(fraudCtx, Duration.ofMillis(500));
         if (score.isPresent() && score.get().compareTo(FRAUD_THRESHOLD) >= 0) {
             Transaction declined = txn.decline(RC_FRAUD_DECLINE);

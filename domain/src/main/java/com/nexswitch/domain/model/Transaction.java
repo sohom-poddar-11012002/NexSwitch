@@ -4,6 +4,7 @@ import com.nexswitch.domain.exception.InvalidStateTransitionException;
 import com.nexswitch.domain.model.event.*;
 import com.nexswitch.domain.model.vo.*;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,19 +80,35 @@ public final class Transaction {
     // ── Functional "with" helpers (status change only — no events) ────────────
 
     public Transaction withStatus(TransactionStatus newStatus) {
-        return toBuilder().status(newStatus).updatedAt(Instant.now()).build();
+        return withStatus(newStatus, Clock.systemUTC());
+    }
+
+    public Transaction withStatus(TransactionStatus newStatus, Clock clock) {
+        return toBuilder().status(newStatus).updatedAt(Instant.now(clock)).build();
     }
 
     public Transaction withAuthCode(AuthorizationCode code) {
-        return toBuilder().authorizationCode(code).updatedAt(Instant.now()).build();
+        return withAuthCode(code, Clock.systemUTC());
+    }
+
+    public Transaction withAuthCode(AuthorizationCode code, Clock clock) {
+        return toBuilder().authorizationCode(code).updatedAt(Instant.now(clock)).build();
     }
 
     public Transaction withArn(AcquirerReferenceNumber acquirerReferenceNumber) {
-        return toBuilder().arn(acquirerReferenceNumber).updatedAt(Instant.now()).build();
+        return withArn(acquirerReferenceNumber, Clock.systemUTC());
+    }
+
+    public Transaction withArn(AcquirerReferenceNumber acquirerReferenceNumber, Clock clock) {
+        return toBuilder().arn(acquirerReferenceNumber).updatedAt(Instant.now(clock)).build();
     }
 
     public Transaction withResponseCode(String code) {
-        return toBuilder().responseCode(code).updatedAt(Instant.now()).build();
+        return withResponseCode(code, Clock.systemUTC());
+    }
+
+    public Transaction withResponseCode(String code, Clock clock) {
+        return toBuilder().responseCode(code).updatedAt(Instant.now(clock)).build();
     }
 
     // ── Domain aggregate methods — validate, change state, raise typed event ──
