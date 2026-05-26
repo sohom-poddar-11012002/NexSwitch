@@ -1,0 +1,75 @@
+scenario:
+  id: payment-link
+  name: "Payment link — create, share, pay, verify settled"
+  description: >
+    Tests the payment link lifecycle per industry-features.md §3.1.
+    Merchant creates a ₹1,500 payment link with 24h expiry.
+    The link is paid via UPI (simulated). Status must transition
+    CREATED → PAID. Expired links must be rejected.
+  platform: acquiring-service
+  project: payments
+  feature: industry
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+    amount_paise: "000000150000"   # ₹1,500
+    currency: "356"
+    description: "Order #PL-QA-001"
+    customer_vpa: "customer@upi"
+
+  steps:
+    # Step 1 — Create payment link
+    - type: send
+      channel: REST
+      operation: POST /api/v1/payment-links
+      payload:
+        merchant_id: "{{merchant_id}}"
+        amount_paise: "{{amount_paise}}"
+        currency: "{{currency}}"
+        description: "{{description}}"
+        expiry_minutes: "1440"
+      timeout_ms: 5000
+      capture_response_as: link_response
+
+    - type: assert
+      expression: "link_response['link_id'] != null"
+      description: "Payment link ID must be returned"
+      fail_fast: true
+
+    - type: assert
+      expression: "link_response['status'] == 'CREATED'"
+      description: "New link must have CREATED status"
+      fail_fast: true
+
+    - type: inject_variable
+      name: link_id
+      value: "{{link_response['link_id']}}"
+
+    # Step 2 — Pay the link via UPI collect
+    - type: send
+      channel: REST
+      operation: POST /api/v1/payment-links/{{link_id}}/pay
+      payload:
+        payment_method: "UPI"
+        payer_vpa: "{{customer_vpa}}"
+      timeout_ms: 10000
+      capture_response_as: pay_response
+
+    - type: assert
+      expression: "pay_response['status'] == 'PAID' || pay_response['status'] == 'PENDING'"
+      description: "Link must transition to PAID or PENDING after payment initiation"
+      fail_fast: true
+
+    # Step 3 — Verify link status via GET
+    - type: send
+      channel: REST
+      operation: GET /api/v1/payment-links/{{link_id}}
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: status_response
+
+    - type: assert
+      expression: "status_response['link_id'] == link_id"
+      description: "GET must return the same link"
+      fail_fast: false

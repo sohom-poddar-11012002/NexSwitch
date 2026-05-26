@@ -1,0 +1,68 @@
+scenario:
+  id: emi-payment
+  name: "EMI payment — 3-month instalment plan on Visa credit card"
+  description: >
+    Tests the EMI (Equated Monthly Instalment) flow per industry-features.md §2.1.
+    Merchant creates a 3-month EMI plan for ₹6,000 (₹2,000/month).
+    The authorisation carries the EMI plan ID in the private-data field.
+    Response must include the approved EMI plan and instalment details.
+  platform: acquiring-service
+  project: payments
+  feature: industry
+  channel: MULTI
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000600000"   # ₹6,000
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    emi_tenure_months: "3"
+    emi_bank_code: "HDFC"
+
+  steps:
+    # Step 1 — Fetch available EMI plans for card BIN
+    - type: send
+      channel: REST
+      operation: GET /api/v1/emi/plans
+      payload:
+        bin6: "453914"
+        amount_paise: "{{amount_paise}}"
+        currency: "{{currency}}"
+      timeout_ms: 5000
+      capture_response_as: emi_plans
+
+    - type: assert
+      expression: "emi_plans['plans'] != null && emi_plans['plans'].size() > 0"
+      description: "At least one EMI plan must be available for this BIN and amount"
+      fail_fast: true
+
+    # Step 2 — Authorise with EMI plan selected
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: REST
+      operation: POST /api/v1/payments/authorize
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        emi_tenure_months: "{{emi_tenure_months}}"
+        emi_bank_code: "{{emi_bank_code}}"
+      timeout_ms: 15000
+      capture_response_as: emi_auth_response
+
+    - type: assert
+      expression: "emi_auth_response['status'] == 'APPROVED'"
+      description: "EMI authorisation must be approved"
+      fail_fast: true
+
+    - type: assert
+      expression: "emi_auth_response['emi_instalment_amount'] != null"
+      description: "Response must include instalment amount"
+      fail_fast: false

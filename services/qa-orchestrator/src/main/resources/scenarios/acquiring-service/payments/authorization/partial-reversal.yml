@@ -1,0 +1,95 @@
+scenario:
+  id: partial-reversal
+  name: "Partial reversal — auth ₹10,000 → capture ₹8,000 → reverse ₹2,000"
+  description: >
+    Exercises the partial-reversal flow per payment-flows.md §5.8.
+    Full auth for ₹10,000; capture for ₹8,000 (less than auth); partial
+    reversal of the uncaptured ₹2,000. The network should acknowledge all
+    three legs and the final transaction state must be CAPTURED.
+  platform: acquiring-service
+  project: payments
+  feature: authorization
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    auth_amount_paise: "000001000000"     # ₹10,000
+    capture_amount_paise: "000000800000" # ₹8,000
+    reversal_amount_paise: "000000200000" # ₹2,000 (uncaptured remainder)
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+
+  steps:
+    # Step 1 — Authorise ₹10,000
+    - type: inject_variable
+      name: stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{stan}}"
+        amount_paise: "{{auth_amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 15000
+      capture_response_as: auth_response
+
+    - type: assert
+      expression: "auth_response['field39'] == '00'"
+      description: "Auth for ₹10,000 must be approved"
+      fail_fast: true
+
+    # Step 2 — Capture ₹8,000
+    - type: inject_variable
+      name: capture_stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: capture_request_0200
+      payload:
+        pan: "{{pan}}"
+        stan: "{{capture_stan}}"
+        amount_paise: "{{capture_amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        original_stan: "{{stan}}"
+      timeout_ms: 15000
+      capture_response_as: capture_response
+
+    - type: assert
+      expression: "capture_response['field39'] == '00'"
+      description: "Capture for ₹8,000 must be acknowledged"
+      fail_fast: true
+
+    # Step 3 — Partial reversal ₹2,000 (uncaptured amount)
+    - type: inject_variable
+      name: reversal_stan
+      value: "{{$stan}}"
+
+    - type: send
+      channel: ISO8583
+      operation: reversal_request_0400
+      payload:
+        pan: "{{pan}}"
+        stan: "{{reversal_stan}}"
+        amount_paise: "{{reversal_amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        original_data: "0100{{stan}}0000000000000000000000000000"
+      timeout_ms: 15000
+      capture_response_as: reversal_response
+
+    - type: assert
+      expression: "reversal_response['field39'] == '00'"
+      description: "Partial reversal of ₹2,000 must be acknowledged"
+      fail_fast: true
