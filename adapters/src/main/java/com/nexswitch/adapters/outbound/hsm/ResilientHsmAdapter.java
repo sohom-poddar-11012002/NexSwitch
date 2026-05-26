@@ -29,6 +29,13 @@ public class ResilientHsmAdapter implements HsmPort {
         this.delegate = delegate;
     }
 
+    // ping() bypasses CB/bulkhead intentionally — health checks must reach the delegate
+    // even when the circuit is OPEN; using CB here would always report DOWN while open.
+    @Override
+    public boolean ping() {
+        return delegate.ping();
+    }
+
     // LEARN: Bulkhead (semaphore) limits max concurrent HSM calls — HSMs are expensive, shared
     //        hardware; unbounded concurrency would saturate the HSM session pool and cause
     //        every caller to time out. Semaphore variant rejects excess callers immediately.

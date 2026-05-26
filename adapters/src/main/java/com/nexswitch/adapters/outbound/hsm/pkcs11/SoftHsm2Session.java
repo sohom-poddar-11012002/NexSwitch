@@ -97,6 +97,10 @@ public class SoftHsm2Session implements AutoCloseable {
         return pkcs11Provider;
     }
 
+    public boolean isOpen() {
+        return Security.getProvider(providerName) != null;
+    }
+
     @Override
     public void close() {
         Security.removeProvider(providerName);
