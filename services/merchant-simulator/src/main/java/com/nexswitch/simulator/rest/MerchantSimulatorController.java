@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 // LEARN: SimulatorPattern — merchant-simulator exercises the full integration path (Kafka publish
 //        → cache invalidation) so QA scenarios can verify near-real-time config propagation.
 @RestController
@@ -21,9 +23,9 @@ public class MerchantSimulatorController {
     }
 
     @PostMapping("/merchant-config-change/{merchantId}")
-    public ResponseEntity<String> simulateMerchantConfigChange(@PathVariable String merchantId) {
+    public ResponseEntity<Map<String, String>> simulateMerchantConfigChange(@PathVariable String merchantId) {
         log.info("simulator.merchant_config_change merchantId={}", merchantId);
         configPublisher.publish(merchantId);
-        return ResponseEntity.ok("merchant.config.updated published for " + merchantId);
+        return ResponseEntity.ok(Map.of("event", "merchant.config.updated", "merchantId", merchantId));
     }
 }
