@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Principle of least privilege — each job only reads source code.
+# Deploy jobs use AWS secrets (not GITHUB_TOKEN) so no additional permissions needed.
+permissions:
+  contents: read
 
 # ─── Stage 1: Test ────────────────────────────────────────────────────────────
 # Runs on every push and PR. This is the gate for merging to main.
