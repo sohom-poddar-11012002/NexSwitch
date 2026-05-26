@@ -6,6 +6,7 @@ import com.nexswitch.domain.model.vo.Money;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -14,21 +15,36 @@ import static com.nexswitch.domain.model.PaymentNetwork.*;
 // LEARN: FeeWaterfall — MDR → interchange → assessment → acquirer margin; BigDecimal throughout
 public class FeeWaterfallCalculator {
 
-    private static final Map<PaymentNetwork, Map<String, BigDecimal>> INTERCHANGE = Map.of(
-        VISA,       Map.of("CREDIT", new BigDecimal("0.0180"), "DEBIT", new BigDecimal("0.0090")),
-        MASTERCARD, Map.of("CREDIT", new BigDecimal("0.0175"), "DEBIT", new BigDecimal("0.0085")),
-        RUPAY,      Map.of("CREDIT", new BigDecimal("0.0100"), "DEBIT", new BigDecimal("0.0060")),
-        UPI,        Map.of("CREDIT", BigDecimal.ZERO,           "DEBIT", BigDecimal.ZERO)
-    );
+    // LEARN: EnumMap — array-indexed by ordinal; faster and lower-memory than HashMap for enum keys.
+    private static final Map<PaymentNetwork, Map<String, BigDecimal>> INTERCHANGE;
+    private static final Map<PaymentNetwork, BigDecimal> ASSESSMENT;
 
-    private static final Map<PaymentNetwork, BigDecimal> ASSESSMENT = Map.of(
-        VISA,       new BigDecimal("0.0014"),
-        MASTERCARD, new BigDecimal("0.0013"),
-        RUPAY,      new BigDecimal("0.0006"),
-        UPI,        BigDecimal.ZERO
-    );
+    static {
+        INTERCHANGE = new EnumMap<>(PaymentNetwork.class);
+        INTERCHANGE.put(VISA,       Map.of("CREDIT", new BigDecimal("0.0180"), "DEBIT", new BigDecimal("0.0090")));
+        INTERCHANGE.put(MASTERCARD, Map.of("CREDIT", new BigDecimal("0.0175"), "DEBIT", new BigDecimal("0.0085")));
+        INTERCHANGE.put(RUPAY,      Map.of("CREDIT", new BigDecimal("0.0100"), "DEBIT", new BigDecimal("0.0060")));
+        INTERCHANGE.put(UPI,        Map.of("CREDIT", BigDecimal.ZERO,           "DEBIT", BigDecimal.ZERO));
 
-    private static final BigDecimal MINIMUM_MDR = new BigDecimal("2.00");
+        ASSESSMENT = new EnumMap<>(PaymentNetwork.class);
+        ASSESSMENT.put(VISA,       new BigDecimal("0.0014"));
+        ASSESSMENT.put(MASTERCARD, new BigDecimal("0.0013"));
+        ASSESSMENT.put(RUPAY,      new BigDecimal("0.0006"));
+        ASSESSMENT.put(UPI,        BigDecimal.ZERO);
+    }
+
+    private static final BigDecimal DEFAULT_MINIMUM_MDR = new BigDecimal("2.00");
+
+    private final BigDecimal minimumMdr;
+
+    public FeeWaterfallCalculator() {
+        this.minimumMdr = DEFAULT_MINIMUM_MDR;
+    }
+
+    public FeeWaterfallCalculator(BigDecimal minimumMdr) {
+        Objects.requireNonNull(minimumMdr, "minimumMdr must not be null");
+        this.minimumMdr = minimumMdr;
+    }
 
     public FeeBreakdown calculate(Money grossAmount,
                                   PaymentNetwork network,
@@ -47,7 +63,7 @@ public class FeeWaterfallCalculator {
         var interchange  = pct(gross, INTERCHANGE.get(network).get(cardType.toUpperCase()));
         var assessment   = pct(gross, ASSESSMENT.get(network));
         var mdrRaw       = pct(gross, mdrPercentage);
-        var mdr          = mdrRaw.max(MINIMUM_MDR);
+        var mdr          = mdrRaw.max(minimumMdr);
         var net          = gross.subtract(interchange).subtract(assessment).subtract(mdr);
         var reserve      = pct(net, reservePercentage);
         var payout       = net.subtract(reserve);

@@ -2,6 +2,7 @@ package com.nexswitch.adapters.inbound.iso8583;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -43,9 +44,14 @@ public class Iso8583TcpServer implements SmartLifecycle {
         bossGroup   = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
         try {
+            // LEARN: SO_BACKLOG — kernel queues up to N completed-handshake connections
+            //        waiting for accept(2). Under burst load, a small backlog drops SYNs.
             ServerBootstrap bootstrap = new ServerBootstrap()
                     .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 1024)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .childOption(ChannelOption.TCP_NODELAY, true)
                     .childHandler(channelInitializer);
 
             serverChannelFuture = bootstrap.bind(configuredPort).sync();

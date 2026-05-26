@@ -232,7 +232,10 @@ public class ScenarioExecutionEngine {
                     }
                 }
                 return new StepResult.Passed("loop_" + iteration, elapsed(start), Map.of());
-            }, runnable -> Thread.ofVirtual().start(runnable));
+            }, runnable -> Thread.ofVirtual()
+                    .uncaughtExceptionHandler((t, e) ->
+                            log.error("qa.loop.thread_uncaught_exception iteration={}", iteration, e))
+                    .start(runnable));
             futures.add(f);
         }
 

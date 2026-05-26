@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -36,7 +37,7 @@ class CachingBinLookupAdapterTest {
     @BeforeEach
     void setUp() {
         when(redis.opsForValue()).thenReturn(ops);
-        adapter = new CachingBinLookupAdapter(delegate, redis);
+        adapter = new CachingBinLookupAdapter(delegate, redis, new ObjectMapper());
     }
 
     // ── L1 hit: delegate never called after first lookup ─────────────────────

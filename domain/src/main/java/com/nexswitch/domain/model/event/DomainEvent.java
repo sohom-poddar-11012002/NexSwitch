@@ -1,5 +1,6 @@
 package com.nexswitch.domain.model.event;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -19,6 +20,15 @@ public record DomainEvent<T>(
             String aggregateId,
             String aggregateType,
             T payload) {
+        return of(Clock.systemUTC(), eventType, aggregateId, aggregateType, payload);
+    }
+
+    public static <T> DomainEvent<T> of(
+            Clock clock,
+            String eventType,
+            String aggregateId,
+            String aggregateType,
+            T payload) {
         return new DomainEvent<>(
             UUID.randomUUID().toString(),
             eventType,
@@ -26,7 +36,7 @@ public record DomainEvent<T>(
             aggregateId,
             aggregateType,
             "domain",
-            Instant.now(),
+            Instant.now(clock),
             payload
         );
     }

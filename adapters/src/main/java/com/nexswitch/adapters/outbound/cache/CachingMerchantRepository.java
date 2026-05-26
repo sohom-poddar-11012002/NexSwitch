@@ -43,14 +43,15 @@ public class CachingMerchantRepository implements MerchantRepository {
 
     public CachingMerchantRepository(
             @Qualifier("postgresMerchantRepository") MerchantRepository delegate,
-            StringRedisTemplate redis) {
+            StringRedisTemplate redis,
+            ObjectMapper mapper) {
         this.delegate = delegate;
         this.redis    = redis;
         this.l1 = Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofSeconds(30))
                 .maximumSize(1_000)
                 .build();
-        this.mapper = new ObjectMapper();
+        this.mapper = mapper;
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.nexswitch.domain.model.vo.TxnRef;
 import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -21,15 +22,21 @@ public class QRSessionManager {
             DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC);
 
     private final long sessionTtlMinutes;
+    private final Clock clock;
     private final AtomicInteger seq = new AtomicInteger(0);
 
     public QRSessionManager(long sessionTtlMinutes) {
+        this(sessionTtlMinutes, Clock.systemUTC());
+    }
+
+    public QRSessionManager(long sessionTtlMinutes, Clock clock) {
         if (sessionTtlMinutes <= 0) throw new IllegalArgumentException("sessionTtlMinutes must be positive");
         this.sessionTtlMinutes = sessionTtlMinutes;
+        this.clock = clock;
     }
 
     public QRSession create(MerchantId merchantId, Money amount, String orderId) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         TxnRef txnRef = TxnRef.of("TXN" + TIMESTAMP_FMT.format(now)
                 + merchantId.value()
                 + String.format("%04d", seq.incrementAndGet() % 10_000));
@@ -57,7 +64,7 @@ public class QRSessionManager {
     }
 
     public boolean isActive(QRSession session) {
-        return session.status() == QRSession.Status.PENDING && !session.isExpired();
+        return session.status() == QRSession.Status.PENDING && !session.isExpired(clock);
     }
 
     private static String encode(String value) {

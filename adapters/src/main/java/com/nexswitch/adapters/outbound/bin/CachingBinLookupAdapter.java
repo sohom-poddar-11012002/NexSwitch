@@ -38,7 +38,8 @@ public class CachingBinLookupAdapter implements BinLookupPort {
 
     public CachingBinLookupAdapter(
             @Qualifier("mockBinLookupAdapter") BinLookupPort delegate,
-            StringRedisTemplate redis) {
+            StringRedisTemplate redis,
+            ObjectMapper mapper) {
         this.delegate = delegate;
         this.redis    = redis;
         // LEARN: expireAfterWrite resets TTL on write, not on read — prevents stale hot keys
@@ -47,7 +48,7 @@ public class CachingBinLookupAdapter implements BinLookupPort {
                 .expireAfterWrite(Duration.ofSeconds(60))
                 .maximumSize(10_000)
                 .build();
-        this.mapper = new ObjectMapper();
+        this.mapper = mapper;
     }
 
     @Override

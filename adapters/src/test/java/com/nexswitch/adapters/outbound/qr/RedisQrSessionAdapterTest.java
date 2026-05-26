@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.Optional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mockito.quality.Strictness;
 import org.mockito.junit.jupiter.MockitoSettings;
 
@@ -44,7 +45,7 @@ class RedisQrSessionAdapterTest {
     @BeforeEach
     void setUp() {
         when(redis.opsForValue()).thenReturn(valueOps);
-        adapter = new RedisQrSessionAdapter(redis);
+        adapter = new RedisQrSessionAdapter(redis, new ObjectMapper());
     }
 
     @Test

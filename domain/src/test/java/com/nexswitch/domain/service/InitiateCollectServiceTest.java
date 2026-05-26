@@ -9,11 +9,11 @@ import com.nexswitch.domain.port.inbound.InitiateCollectCommand;
 import com.nexswitch.domain.port.outbound.CollectRequestPort;
 import com.nexswitch.domain.port.outbound.MerchantRepository;
 import com.nexswitch.domain.port.outbound.UpiPspNotifier;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -32,7 +32,12 @@ class InitiateCollectServiceTest {
     @Mock CollectRequestPort  collectRequestPort;
     @Mock UpiPspNotifier      upiPspNotifier;
 
-    @InjectMocks InitiateCollectService service;
+    InitiateCollectService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new InitiateCollectService(merchantRepository, collectRequestPort, upiPspNotifier);
+    }
 
     private static final MerchantId MERCH   = new MerchantId("MERCH0000999");
     private static final Currency   INR     = Currency.getInstance("INR");
