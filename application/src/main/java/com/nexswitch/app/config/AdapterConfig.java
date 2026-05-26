@@ -1,11 +1,15 @@
 package com.nexswitch.app.config;
 
+import com.nexswitch.domain.port.inbound.ProcessRefundUseCase;
+import com.nexswitch.domain.port.inbound.ReconcileUseCase;
 import com.nexswitch.domain.port.outbound.*;
 import com.nexswitch.domain.service.AuthorizationService;
 import com.nexswitch.domain.service.GenerateQRService;
 import com.nexswitch.domain.service.GenerateStaticQRService;
 import com.nexswitch.domain.service.InitiateCollectService;
+import com.nexswitch.domain.service.ProcessRefundService;
 import com.nexswitch.domain.service.QRSessionManager;
+import com.nexswitch.domain.service.ReconciliationService;
 import com.nexswitch.domain.service.ReversalService;
 import com.nexswitch.domain.service.TransactionStateMachine;
 import org.springframework.beans.factory.annotation.Value;
@@ -83,5 +87,17 @@ public class AdapterConfig {
             CollectRequestPort collectRequestPort,
             UpiPspNotifier upiPspNotifier) {
         return new InitiateCollectService(merchantRepository, collectRequestPort, upiPspNotifier);
+    }
+
+    @Bean
+    public ProcessRefundUseCase processRefundUseCase(
+            TransactionRepository transactionRepository,
+            RefundPort refundPort) {
+        return new ProcessRefundService(transactionRepository, refundPort);
+    }
+
+    @Bean
+    public ReconcileUseCase reconcileUseCase(TransactionRepository transactionRepository) {
+        return new ReconciliationService(transactionRepository);
     }
 }
