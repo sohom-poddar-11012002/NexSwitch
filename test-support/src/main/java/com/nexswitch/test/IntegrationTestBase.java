@@ -47,7 +47,7 @@ public abstract class IntegrationTestBase {
     //        confluentinc/cp-kafka has different startup log patterns so its wait strategy fails.
     @Container
     static final KafkaContainer KAFKA =
-        new KafkaContainer(DockerImageName.parse("apache/kafka:latest"))
+        new KafkaContainer(DockerImageName.parse("apache/kafka:3.9.0"))
             .withReuse(true);
 
     @DynamicPropertySource

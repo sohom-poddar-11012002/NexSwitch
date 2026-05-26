@@ -1,0 +1,67 @@
+scenario:
+  id: duplicate-stan-idempotency
+  name: "Duplicate STAN — idempotency gate rejects retransmission"
+  description: >
+    Sends the same 0100 twice with the identical terminal + STAN combination.
+    ISO 8583 mandates STAN uniqueness per terminal per day (Field 11).
+    The first request must be approved; the second must be declined with
+    response code 94 (Duplicate Transmission) — proving the idempotency
+    gate is active and working.
+  platform: acquiring-service
+  project: payments
+  feature: concurrency
+  channel: ISO8583
+
+  variables:
+    pan: "4539148803436467"
+    amount_paise: "000000050000"   # ₹500
+    terminal_id: "TERM0042"
+    merchant_id: "MERCH0000999"
+    currency: "356"
+    pos_entry_mode: "051"
+
+  steps:
+    # Fix a single STAN value for both requests
+    - type: inject_variable
+      name: fixed_stan
+      value: "{{$stan}}"
+
+    # First request — should be approved
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{fixed_stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 15000
+      capture_response_as: first_response
+
+    - type: assert
+      expression: "first_response['field39'] == '00'"
+      description: "First request with this STAN must be approved"
+      fail_fast: true
+
+    # Second request — identical terminal + STAN; must be rejected as duplicate
+    - type: send
+      channel: ISO8583
+      operation: auth_request_0100
+      payload:
+        pan: "{{pan}}"
+        stan: "{{fixed_stan}}"
+        amount_paise: "{{amount_paise}}"
+        terminal_id: "{{terminal_id}}"
+        merchant_id: "{{merchant_id}}"
+        currency: "{{currency}}"
+        pos_entry_mode: "{{pos_entry_mode}}"
+      timeout_ms: 15000
+      capture_response_as: duplicate_response
+
+    - type: assert
+      expression: "duplicate_response['field39'] == '94'"
+      description: "Duplicate STAN must be declined with RC 94 (Duplicate Transmission)"
+      fail_fast: true

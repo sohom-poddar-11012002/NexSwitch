@@ -18,6 +18,7 @@ jobs:
   test:
     name: Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -44,7 +45,7 @@ jobs:
           cache: maven
 
       - name: Build and test (unit + ArchUnit)
-        run: mvn verify --batch-mode --no-transfer-progress
+        run: mvn verify --batch-mode --no-transfer-progress --fail-at-end
 
       - name: Upload test results
         if: always()
@@ -80,7 +81,7 @@ jobs:
           cache: maven
 
       - name: Run integration tests (Testcontainers)
-        run: mvn verify -P integration-tests --batch-mode --no-transfer-progress
+        run: mvn verify -P integration-tests --batch-mode --no-transfer-progress --fail-at-end
 
 # ─── Stage 3: Build & Push ────────────────────────────────────────────────────
 # Builds Docker images tagged with git SHA and pushes to ECR.

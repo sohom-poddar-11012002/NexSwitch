@@ -1,0 +1,89 @@
+scenario:
+  id: virtual-account-credit
+  name: "Virtual account — inbound credit notification and balance update"
+  description: >
+    Tests the virtual account credit flow per industry-features.md §4.1.
+    A ₹5,000 NEFT credit arrives on a merchant's virtual account.
+    The platform must record the credit, update the virtual account balance,
+    and emit a webhook notification to the merchant's registered callback URL.
+  platform: acquiring-service
+  project: payments
+  feature: industry
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+    virtual_account_id: "VA-QA-001"
+    credit_amount_paise: "000000500000"   # ₹5,000
+    currency: "356"
+    utr: "SBIN2026052700001"
+    payer_ifsc: "SBIN0000123"
+    payer_account: "1234567890"
+    payer_name: "Test Payer"
+
+  steps:
+    # Step 1 — Simulate inbound credit notification (bank webhook)
+    - type: send
+      channel: REST
+      operation: POST /api/v1/virtual-accounts/{{virtual_account_id}}/credits
+      payload:
+        merchant_id: "{{merchant_id}}"
+        amount_paise: "{{credit_amount_paise}}"
+        currency: "{{currency}}"
+        utr: "{{utr}}"
+        payer_ifsc: "{{payer_ifsc}}"
+        payer_account: "{{payer_account}}"
+        payer_name: "{{payer_name}}"
+        credit_mode: "NEFT"
+      timeout_ms: 5000
+      capture_response_as: credit_response
+
+    - type: assert
+      expression: "credit_response['credit_id'] != null"
+      description: "Credit record ID must be returned"
+      fail_fast: true
+
+    - type: assert
+      expression: "credit_response['status'] == 'PROCESSED'"
+      description: "Credit must be immediately processed"
+      fail_fast: true
+
+    - type: inject_variable
+      name: credit_id
+      value: "{{credit_response['credit_id']}}"
+
+    # Step 2 — Verify virtual account balance increased
+    - type: send
+      channel: REST
+      operation: GET /api/v1/virtual-accounts/{{virtual_account_id}}/balance
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: balance_response
+
+    - type: assert
+      expression: "balance_response['virtual_account_id'] == virtual_account_id"
+      description: "Balance response must be for the correct virtual account"
+      fail_fast: false
+
+    - type: assert
+      expression: "balance_response['available_balance_paise'] != null"
+      description: "Available balance must be present after credit"
+      fail_fast: true
+
+    # Step 3 — Verify credit is listed in transaction history
+    - type: send
+      channel: REST
+      operation: GET /api/v1/virtual-accounts/{{virtual_account_id}}/credits/{{credit_id}}
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: credit_detail
+
+    - type: assert
+      expression: "credit_detail['utr'] == utr"
+      description: "Credit detail must reference the correct UTR"
+      fail_fast: false
+
+    - type: assert
+      expression: "credit_detail['amount_paise'] == credit_amount_paise"
+      description: "Credited amount must match the notified amount"
+      fail_fast: true
