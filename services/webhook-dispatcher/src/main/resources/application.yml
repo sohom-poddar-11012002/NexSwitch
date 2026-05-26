@@ -30,7 +30,6 @@ spring:
     producer:
       acks: all
       retries: 3
-      enable-idempotence: true
       compression-type: snappy
     consumer:
       auto-offset-reset: earliest
@@ -55,7 +54,7 @@ storage:
 
 management:
   server:
-    port: 8081
+    port: 8086
   endpoints:
     web:
       exposure:

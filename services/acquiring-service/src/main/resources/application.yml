@@ -32,15 +32,16 @@ spring:
     producer:
       acks: all
       retries: 3
-      enable-idempotence: true
       compression-type: snappy
     consumer:
       auto-offset-reset: earliest
       enable-auto-commit: false
       isolation-level: read_committed
 
-  security:
-    enabled: false   # disabled during skeleton phase
+  servlet:
+    multipart:
+      max-file-size: 256KB
+      max-request-size: 256KB
 
 server:
   port: 8080
@@ -48,11 +49,6 @@ server:
   #        before any validation fires. Cap at 256KB: well above any valid payment request.
   tomcat:
     max-http-form-post-size: 262144   # 256 KB
-
-spring.servlet:
-  multipart:
-    max-file-size: 256KB
-    max-request-size: 256KB
 
 cors:
   allowed-origins: >
