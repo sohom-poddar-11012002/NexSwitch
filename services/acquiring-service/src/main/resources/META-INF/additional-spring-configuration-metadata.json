@@ -1,0 +1,69 @@
+{
+  "properties": [
+    {
+      "name": "upstream.provider",
+      "type": "java.lang.String",
+      "description": "Upstream network adapter: wiremock (dev), visa, mastercard."
+    },
+    {
+      "name": "hsm.provider",
+      "type": "java.lang.String",
+      "description": "HSM adapter: mock (dev), softhsm2, thales."
+    },
+    {
+      "name": "hsm.pkcs11.library",
+      "type": "java.lang.String",
+      "description": "Path to the PKCS#11 shared library (e.g. libsofthsm2.so)."
+    },
+    {
+      "name": "hsm.pkcs11.slot",
+      "type": "java.lang.Integer",
+      "description": "PKCS#11 slot index."
+    },
+    {
+      "name": "hsm.pkcs11.pin",
+      "type": "java.lang.String",
+      "description": "PKCS#11 slot PIN."
+    },
+    {
+      "name": "hsm.pkcs11.bdk-alias",
+      "type": "java.lang.String",
+      "description": "Key alias for the Base Derivation Key (DUKPT)."
+    },
+    {
+      "name": "hsm.pkcs11.zpk-alias",
+      "type": "java.lang.String",
+      "description": "Key alias for the Zone PIN Key."
+    },
+    {
+      "name": "hsm.pkcs11.mak-alias",
+      "type": "java.lang.String",
+      "description": "Key alias for the Message Authentication Key."
+    },
+    {
+      "name": "storage.provider",
+      "type": "java.lang.String",
+      "description": "File storage adapter: local (dev), s3."
+    },
+    {
+      "name": "cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated CORS allowed origins for REST endpoints."
+    },
+    {
+      "name": "npci.callback.api-key",
+      "type": "java.lang.String",
+      "description": "NPCI UPI callback auth key; blank = check skipped in dev."
+    },
+    {
+      "name": "iso8583.port",
+      "type": "java.lang.Integer",
+      "description": "TCP port for the ISO 8583 Netty server."
+    },
+    {
+      "name": "qr.session.ttl-minutes",
+      "type": "java.lang.Long",
+      "description": "Redis TTL for dynamic QR sessions in minutes."
+    }
+  ]
+}

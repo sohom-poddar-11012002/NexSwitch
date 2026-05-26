@@ -1,0 +1,49 @@
+{
+  "properties": [
+    {
+      "name": "qa.channel.iso8583.host",
+      "type": "java.lang.String",
+      "description": "ISO 8583 switch host for QA test channel."
+    },
+    {
+      "name": "qa.channel.iso8583.port",
+      "type": "java.lang.Integer",
+      "description": "ISO 8583 switch port for QA test channel."
+    },
+    {
+      "name": "qa.scenarios.pattern",
+      "type": "java.lang.String",
+      "description": "Classpath glob pattern for scenario YAML files."
+    },
+    {
+      "name": "qa.scenarios.recorded-dir",
+      "type": "java.lang.String",
+      "description": "Directory for recorded scenario output."
+    },
+    {
+      "name": "qa.runs.pattern",
+      "type": "java.lang.String",
+      "description": "Classpath glob pattern for run YAML files."
+    },
+    {
+      "name": "qa.suites.pattern",
+      "type": "java.lang.String",
+      "description": "Classpath glob pattern for suite YAML files."
+    },
+    {
+      "name": "qa.recorder.proxy.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable the QA recorder proxy for capturing live traffic."
+    },
+    {
+      "name": "qa.recorder.proxy.port",
+      "type": "java.lang.Integer",
+      "description": "Port for the QA recorder proxy."
+    },
+    {
+      "name": "qa.notifications.webhook-url",
+      "type": "java.lang.String",
+      "description": "Webhook URL for QA failure alerts (Slack or generic webhook)."
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "upstream.provider",
+      "type": "java.lang.String",
+      "description": "Upstream network adapter: wiremock (dev), visa, mastercard."
+    },
+    {
+      "name": "hsm.provider",
+      "type": "java.lang.String",
+      "description": "HSM adapter: mock (dev), softhsm2, thales."
+    },
+    {
+      "name": "storage.provider",
+      "type": "java.lang.String",
+      "description": "File storage adapter: local (dev), s3."
+    },
+    {
+      "name": "webhook.max-attempts",
+      "type": "java.lang.Integer",
+      "description": "Maximum delivery retry attempts before routing to DLQ."
+    },
+    {
+      "name": "webhook.dlq-topic",
+      "type": "java.lang.String",
+      "description": "Kafka DLQ topic name for failed webhook deliveries."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "upstream.provider",
+      "type": "java.lang.String",
+      "description": "Upstream network adapter: wiremock (dev), visa, mastercard."
+    },
+    {
+      "name": "hsm.provider",
+      "type": "java.lang.String",
+      "description": "HSM adapter: mock (dev), softhsm2, thales."
+    },
+    {
+      "name": "storage.provider",
+      "type": "java.lang.String",
+      "description": "File storage adapter: local (dev), s3."
+    }
+  ]
+}
