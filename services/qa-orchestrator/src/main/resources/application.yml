@@ -2,6 +2,13 @@ spring:
   application:
     name: qa-orchestrator
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  threads:
+    virtual:
+      enabled: true
+
   datasource:
     url: ${QA_DB_URL:jdbc:postgresql://localhost:5432/nexswitch}
     username: ${QA_DB_USER:nexswitch}
@@ -9,6 +16,9 @@ spring:
     hikari:
       connection-timeout: 3000
       maximum-pool-size: 10
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
 
   jpa:
     hibernate:
@@ -28,9 +38,13 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 100
+      properties:
+        max.poll.interval.ms: 300000
 
 server:
   port: 8700
+  shutdown: graceful
 
 management:
   server:

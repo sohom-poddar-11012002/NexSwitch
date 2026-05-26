@@ -114,15 +114,12 @@ services:
       context: .
       dockerfile: services/mock-upstream/Dockerfile
     ports:
-      - "8001:8001"   # Mock Visa
-      - "8002:8002"   # Mock Mastercard
-      - "8003:8003"   # Mock NPCI NFS/RuPay
-      - "8004:8004"   # Mock NPCI UPI (REST)
-      - "8090:8090"   # Management
+      - "8090:8090"   # REST (main server port)
+      - "8091:8091"   # Management / actuator
     environment:
       SPRING_PROFILES_ACTIVE: local
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8090/actuator/health/readiness || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8091/actuator/health/readiness || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -134,7 +131,8 @@ services:
       dockerfile: services/acquiring-service/Dockerfile
     ports:
       - "8000:8000"   # ISO 8583 TCP
-      - "8080:8080"   # REST (QR, status, management)
+      - "8080:8080"   # REST (QR, status)
+      - "8081:8081"   # Management / actuator
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -156,7 +154,7 @@ services:
       mock-upstream:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health/readiness || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health/readiness || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -185,7 +183,9 @@ services:
     build:
       context: .
       dockerfile: services/webhook-dispatcher/Dockerfile
-    ports: ["8200:8200"]
+    ports:
+      - "8085:8085"   # REST
+      - "8086:8086"   # Management / actuator
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -307,7 +307,7 @@ services:
       acquiring-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8700/actuator/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8701/actuator/health/readiness"]
       interval: 15s
       timeout: 5s
       retries: 5
