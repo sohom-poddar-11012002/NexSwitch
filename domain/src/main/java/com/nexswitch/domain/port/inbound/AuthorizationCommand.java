@@ -25,7 +25,8 @@ public record AuthorizationCommand(
         EmvData emvData,
         byte[] pinBlock,
         byte[] ksn,
-        String posEntryMode
+        String posEntryMode,
+        String cardLast4
 ) {
     public AuthorizationCommand {
         Objects.requireNonNull(transactionId, "transactionId must not be null");

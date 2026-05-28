@@ -23,6 +23,7 @@ public class KafkaConfig {
     @Bean public NewTopic transactionRefunded()   { return topic("transaction.refunded"); }
     @Bean public NewTopic transactionChargebackReceived() { return topic("transaction.chargeback_received"); }
     @Bean public NewTopic merchantConfigUpdated() { return topic("merchant.config.updated"); }
+    @Bean public NewTopic webhookEvents()          { return topic("webhook.events"); }
     @Bean public NewTopic webhookDlq()            { return topic("webhook.dlq"); }
     @Bean public NewTopic notificationEvents()    { return topic("notification.events"); }
     @Bean public NewTopic settlementEvents()      { return topic("settlement.events"); }

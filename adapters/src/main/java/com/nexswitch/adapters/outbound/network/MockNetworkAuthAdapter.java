@@ -3,6 +3,7 @@ package com.nexswitch.adapters.outbound.network;
 import com.nexswitch.domain.model.AuthorizationResult;
 import com.nexswitch.domain.model.ReversalResult;
 import com.nexswitch.domain.model.Transaction;
+import com.nexswitch.domain.model.TransactionStatus;
 import com.nexswitch.domain.model.vo.AuthorizationCode;
 import com.nexswitch.domain.port.outbound.AuthorizationPort;
 import org.springframework.stereotype.Component;
@@ -28,5 +29,11 @@ public class MockNetworkAuthAdapter implements AuthorizationPort {
     @Override
     public ReversalResult reverse(Transaction transaction) {
         return new ReversalResult.Accepted(Instant.now());
+    }
+
+    @Override
+    public TransactionStatus inquireStatus(Transaction transaction) {
+        // Mock: always resolve UNKNOWN as AUTHORIZED for local dev
+        return TransactionStatus.AUTHORIZED;
     }
 }

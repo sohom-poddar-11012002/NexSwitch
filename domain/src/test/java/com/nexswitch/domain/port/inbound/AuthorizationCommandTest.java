@@ -27,7 +27,8 @@ class AuthorizationCommandTest {
                 null,
                 new byte[]{0x02},
                 null,   // ksn: null for non-PIN flows
-                "07"
+                "07",
+                "1111"  // cardLast4
         );
     }
 
@@ -51,7 +52,8 @@ class AuthorizationCommandTest {
                 null,
                 new byte[]{0x02},
                 null,
-                "07"
+                "07",
+                "1111"
         )).isInstanceOf(NullPointerException.class);
     }
 
@@ -70,7 +72,8 @@ class AuthorizationCommandTest {
                 null,
                 new byte[]{0x02},
                 null,
-                "07"
+                "07",
+                "1111"
         )).isInstanceOf(NullPointerException.class);
     }
 
@@ -89,7 +92,8 @@ class AuthorizationCommandTest {
                 null,
                 new byte[]{0x02},
                 null,
-                "07"
+                "07",
+                "1111"
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("amount must be positive");
     }
@@ -109,7 +113,8 @@ class AuthorizationCommandTest {
                 null,
                 new byte[]{0x02},
                 null,
-                "07"
+                "07",
+                "1111"
         )).isInstanceOf(IllegalArgumentException.class);
     }
 }

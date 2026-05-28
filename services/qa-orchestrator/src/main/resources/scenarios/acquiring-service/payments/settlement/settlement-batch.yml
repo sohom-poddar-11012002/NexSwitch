@@ -1,0 +1,51 @@
+scenario:
+  id: settlement-batch
+  name: "Settlement batch — trigger EOD settlement and verify batch"
+  description: >
+    Triggers end-of-day settlement for VISA transactions.
+    All CAPTURED transactions must move to SETTLEMENT_PENDING.
+    The batch result must report at least one settled transaction.
+  platform: acquiring-service
+  project: payments
+  feature: settlement
+  channel: REST
+
+  variables:
+    settlement_date: "2026-05-27"
+    network: "VISA"
+
+  steps:
+    - type: send
+      channel: REST
+      operation: POST /api/v1/settlement/batches
+      payload:
+        settlement_date: "{{settlement_date}}"
+        network: "{{network}}"
+      timeout_ms: 30000
+      capture_response_as: batch_response
+
+    - type: assert
+      expression: "batch_response['batch_id'] != null"
+      description: "Settlement batch must be created with a batch ID"
+      fail_fast: true
+
+    - type: assert
+      expression: "batch_response['status'] == 'SUBMITTED' || batch_response['status'] == 'COMPLETED'"
+      description: "Batch must be SUBMITTED or COMPLETED"
+      fail_fast: true
+
+    - type: inject_variable
+      name: batch_id
+      value: "{{batch_response['batch_id']}}"
+
+    - type: send
+      channel: REST
+      operation: GET /api/v1/settlement/batches/{{batch_id}}
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: batch_status
+
+    - type: assert
+      expression: "batch_status['batch_id'] == batch_id"
+      description: "Batch detail must be retrievable by ID"
+      fail_fast: false

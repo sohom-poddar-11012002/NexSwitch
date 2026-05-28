@@ -4,6 +4,7 @@ import com.nexswitch.domain.port.inbound.ProcessRefundUseCase;
 import com.nexswitch.domain.port.inbound.ReconcileUseCase;
 import com.nexswitch.domain.port.outbound.*;
 import com.nexswitch.domain.service.AuthorizationService;
+import java.time.Clock;
 import com.nexswitch.domain.service.GenerateQRService;
 import com.nexswitch.domain.service.GenerateStaticQRService;
 import com.nexswitch.domain.service.InitiateCollectService;
@@ -37,7 +38,8 @@ public class AdapterConfig {
             HsmPort hsmPort,
             FraudScoringPort fraudScoringPort,
             AuthorizationPort authorizationPort,
-            TransactionRepository transactionRepository) {
+            TransactionRepository transactionRepository,
+            AuditPort auditPort) {
         return new AuthorizationService(
             binLookupPort,
             idempotencyPort,
@@ -47,15 +49,19 @@ public class AdapterConfig {
             fraudScoringPort,
             authorizationPort,
             transactionRepository,
-            new TransactionStateMachine()
+            new TransactionStateMachine(),
+            Clock.systemUTC(),
+            auditPort
         );
     }
 
     @Bean
     public ReversalService reversalService(
             TransactionRepository transactionRepository,
-            AuthorizationPort authorizationPort) {
-        return new ReversalService(transactionRepository, authorizationPort, new TransactionStateMachine());
+            AuthorizationPort authorizationPort,
+            AuditPort auditPort) {
+        return new ReversalService(transactionRepository, authorizationPort,
+                new TransactionStateMachine(), auditPort);
     }
 
     @Bean
@@ -92,12 +98,17 @@ public class AdapterConfig {
     @Bean
     public ProcessRefundUseCase processRefundUseCase(
             TransactionRepository transactionRepository,
-            RefundPort refundPort) {
-        return new ProcessRefundService(transactionRepository, refundPort);
+            RefundPort refundPort,
+            AuditPort auditPort) {
+        return new ProcessRefundService(transactionRepository, refundPort,
+                new TransactionStateMachine(), auditPort);
     }
 
     @Bean
-    public ReconcileUseCase reconcileUseCase(TransactionRepository transactionRepository) {
-        return new ReconciliationService(transactionRepository);
+    public ReconcileUseCase reconcileUseCase(TransactionRepository transactionRepository,
+                                              AuditPort auditPort,
+                                              org.springframework.beans.factory.ObjectProvider<EodFilePort> eodFilePortProvider) {
+        return new ReconciliationService(transactionRepository, new TransactionStateMachine(),
+                auditPort, eodFilePortProvider.getIfAvailable());
     }
 }

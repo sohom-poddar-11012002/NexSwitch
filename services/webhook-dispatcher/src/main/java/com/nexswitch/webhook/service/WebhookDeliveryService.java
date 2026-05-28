@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 // LEARN: ExponentialBackoff — doubling the delay between retries (1s→2s→4s→8s→16s) avoids
 //        hammering a struggling endpoint. Jitter (randomising the delay slightly) is the
@@ -120,7 +121,12 @@ public class WebhookDeliveryService {
 
     private static void backoff(int attempt) {
         try {
-            Thread.sleep(BASE_BACKOFF_MS * (1L << (attempt - 1)));
+            // LEARN: FullJitter — jitter prevents thundering herd when many merchants are
+            //        simultaneously unreachable (e.g., DDoS on their infra). All callers without
+            //        jitter would retry at exactly the same instant after each backoff window.
+            long base = BASE_BACKOFF_MS * (1L << (attempt - 1));
+            long jitter = ThreadLocalRandom.current().nextLong(0, BASE_BACKOFF_MS);
+            Thread.sleep(base + jitter);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

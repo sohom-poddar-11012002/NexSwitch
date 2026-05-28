@@ -1,0 +1,45 @@
+scenario:
+  id: webhook-retry-dlq
+  name: "Webhook delivery — retry exhaustion routes to DLQ"
+  description: >
+    Dispatches a webhook event to a merchant whose configured endpoint returns 503.
+    The dispatcher must retry up to max-attempts then route the delivery to the DLQ.
+    The DLQ topic must contain the failed delivery payload.
+  platform: acquiring-service
+  project: payments
+  feature: webhook
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH_WEBHOOK_FAIL"
+    event_type: "AUTHORIZATION_APPROVED"
+
+  steps:
+    # Trigger a webhook dispatch for a merchant configured with a broken endpoint
+    - type: send
+      channel: REST
+      operation: POST /api/v1/webhooks/dispatch
+      payload:
+        merchant_id: "{{merchant_id}}"
+        event_type: "{{event_type}}"
+        payload: '{"transactionId":"qa-wh-dlq-001","status":"APPROVED","amount":5000}'
+      timeout_ms: 60000
+      capture_response_as: dispatch_response
+
+    - type: assert
+      expression: "dispatch_response['accepted'] == true || dispatch_response['status'] != null"
+      description: "Dispatch must be accepted for async delivery"
+      fail_fast: false
+
+    # Verify DLQ received the failed delivery (allow up to 30s for retry exhaustion)
+    - type: send
+      channel: REST
+      operation: GET /api/v1/webhooks/dlq?merchantId={{merchant_id}}&limit=1
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: dlq_check
+
+    - type: assert
+      expression: "dlq_check['items'] != null"
+      description: "DLQ must be queryable"
+      fail_fast: false

@@ -6,9 +6,9 @@ import com.nexswitch.domain.model.vo.Money;
 import com.nexswitch.domain.port.inbound.RefundCommand;
 import com.nexswitch.domain.port.outbound.RefundPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -27,7 +27,13 @@ class ProcessRefundServiceTest {
 
     @Mock TransactionRepository transactionRepository;
     @Mock RefundPort refundPort;
-    @InjectMocks ProcessRefundService service;
+
+    ProcessRefundService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new ProcessRefundService(transactionRepository, refundPort);
+    }
 
     private static final Currency INR = Currency.getInstance("INR");
 

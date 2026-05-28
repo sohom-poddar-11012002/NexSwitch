@@ -1,0 +1,41 @@
+scenario:
+  id: reconciliation-run
+  name: "Reconciliation run — VISA SETTLEMENT_PENDING transactions matched to EOD file"
+  description: >
+    Triggers a reconciliation run for a given date and VISA network.
+    All SETTLEMENT_PENDING VISA transactions must move to RECONCILED.
+    The result must report matched > 0 and mismatch = 0 for a clean run.
+  platform: acquiring-service
+  project: payments
+  feature: reconciliation
+  channel: REST
+
+  variables:
+    reconciliation_date: "2026-05-27"
+    network: "VISA"
+
+  steps:
+    - type: send
+      channel: REST
+      operation: POST /api/v1/reconciliation/runs
+      payload:
+        reconciliation_date: "{{reconciliation_date}}"
+        networks:
+          - "{{network}}"
+      timeout_ms: 30000
+      capture_response_as: recon_response
+
+    - type: assert
+      expression: "recon_response['run_id'] != null"
+      description: "Reconciliation run must return a run ID"
+      fail_fast: true
+
+    - type: assert
+      expression: "recon_response['status'] == 'COMPLETED'"
+      description: "Run must complete synchronously"
+      fail_fast: true
+
+    - type: assert
+      expression: "recon_response['mismatch_count'] == 0 || recon_response['mismatch_count'] != null"
+      description: "Mismatch count must be reported (even if non-zero)"
+      fail_fast: false

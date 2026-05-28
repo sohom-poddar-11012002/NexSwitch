@@ -1,6 +1,8 @@
 package com.nexswitch.domain.service;
 
 import com.nexswitch.domain.model.*;
+import com.nexswitch.domain.model.event.DomainEvent;
+import com.nexswitch.domain.model.event.TransactionInitiatedEvent;
 import com.nexswitch.domain.model.vo.AuthorizationCode;
 import com.nexswitch.domain.port.inbound.AuthorizationCommand;
 import com.nexswitch.domain.port.inbound.ProcessPaymentUseCase;
@@ -49,6 +51,7 @@ public class AuthorizationService implements ProcessPaymentUseCase {
     private final AuthorizationPort     authorizationPort;
     private final TransactionRepository transactionRepository;
     private final TransactionStateMachine stateMachine;
+    private final AuditPort             auditPort;
     private final Clock clock;
 
     public AuthorizationService(
@@ -63,7 +66,7 @@ public class AuthorizationService implements ProcessPaymentUseCase {
             TransactionStateMachine stateMachine) {
         this(binLookupPort, idempotencyPort, terminalRepository, merchantRepository,
              hsmPort, fraudScoringPort, authorizationPort, transactionRepository,
-             stateMachine, Clock.systemUTC());
+             stateMachine, Clock.systemUTC(), (a, b, c, d, e, f, g, h) -> {});
     }
 
     public AuthorizationService(
@@ -76,7 +79,8 @@ public class AuthorizationService implements ProcessPaymentUseCase {
             AuthorizationPort authorizationPort,
             TransactionRepository transactionRepository,
             TransactionStateMachine stateMachine,
-            Clock clock) {
+            Clock clock,
+            AuditPort auditPort) {
         this.binLookupPort         = binLookupPort;
         this.idempotencyPort       = idempotencyPort;
         this.terminalRepository    = terminalRepository;
@@ -86,6 +90,7 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         this.authorizationPort     = authorizationPort;
         this.transactionRepository = transactionRepository;
         this.stateMachine          = stateMachine;
+        this.auditPort             = auditPort;
         this.clock                 = clock;
     }
 
@@ -126,11 +131,27 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         }
 
         // ── Create INITIATED transaction ───────────────────────────────────
-        Transaction txn = Transaction.initiate(
-                cmd.transactionId(), cmd.merchantId(), cmd.terminalId(),
-                cmd.amount(), cmd.network(), cmd.paymentMethod(),
-                cmd.panHash(), cmd.stan(), Instant.now(clock));
+        Transaction txn = Transaction.builder()
+                .id(cmd.transactionId())
+                .merchantId(cmd.merchantId())
+                .terminalId(cmd.terminalId())
+                .amount(cmd.amount())
+                .network(cmd.network())
+                .paymentMethod(cmd.paymentMethod())
+                .panHash(cmd.panHash())
+                .stan(cmd.stan())
+                .cardLast4(cmd.cardLast4())
+                .status(TransactionStatus.INITIATED)
+                .createdAt(Instant.now(clock))
+                .build();
+        txn.raiseEvent(DomainEvent.of(
+                "transaction.initiated", txn.id().toString(), "TRANSACTION",
+                new TransactionInitiatedEvent(
+                        txn.id(), txn.merchantId(), txn.amount(), txn.network(), txn.paymentMethod())));
         txn = transactionRepository.save(txn);
+        auditPort.record("TRANSACTION_INITIATED", "authorization-service",
+                txn.id(), txn.id().toString(), "TRANSACTION",
+                null, TransactionStatus.INITIATED.name(), null);
 
         // ── Step 6a: DUKPT PIN block translation ──────────────────────────
         // LEARN: PIN block translation is a two-step HSM operation: (1) use BDK+KSN to derive the
@@ -206,6 +227,9 @@ public class AuthorizationService implements ProcessPaymentUseCase {
             case AuthorizationResult.Blocked  b  -> txn.decline(RC_FRAUD_DECLINE);
         };
         transactionRepository.save(finalTxn);
+        auditPort.record("TRANSACTION_FINAL_STATE", "authorization-service",
+                finalTxn.id(), finalTxn.id().toString(), "TRANSACTION",
+                TransactionStatus.AUTHORIZATION_PENDING.name(), finalTxn.status().name(), null);
 
         return result;
     }

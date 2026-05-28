@@ -260,7 +260,8 @@ class AuthorizationServiceTest {
                 null,
                 null,
                 null,   // ksn: null for non-PIN flows
-                "05"
+                "05",
+                "1111"  // cardLast4
         );
     }
 
@@ -280,7 +281,8 @@ class AuthorizationServiceTest {
                 emvData,
                 new byte[]{0x03, 0x04},
                 null,   // ksn: null (EMV without PIN in test)
-                "05"
+                "05",
+                "1111"  // cardLast4
         );
     }
 

@@ -27,9 +27,11 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 public abstract class IntegrationTestBase {
 
+    // LEARN: Version pinned to match CI postgres service container (ci-cd.yml) to avoid
+    //        planner and syntax divergence between unit-test CI and Testcontainers integration runs.
     @Container
     static final PostgreSQLContainer POSTGRES =
-        new PostgreSQLContainer("postgres:18-alpine")
+        new PostgreSQLContainer("postgres:16-alpine")
             .withDatabaseName("nexswitch_test")
             .withUsername("nexswitch_app")
             .withPassword("test_password")

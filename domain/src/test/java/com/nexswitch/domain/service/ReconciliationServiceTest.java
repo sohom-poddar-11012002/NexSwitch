@@ -4,9 +4,9 @@ import com.nexswitch.domain.fixture.TransactionFixture;
 import com.nexswitch.domain.model.*;
 import com.nexswitch.domain.port.inbound.ReconciliationCommand;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -23,7 +23,13 @@ import static org.mockito.Mockito.*;
 class ReconciliationServiceTest {
 
     @Mock TransactionRepository transactionRepository;
-    @InjectMocks ReconciliationService service;
+
+    ReconciliationService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new ReconciliationService(transactionRepository);
+    }
 
     @Test
     void reconcilesPendingTransactionsForMatchingNetwork() {

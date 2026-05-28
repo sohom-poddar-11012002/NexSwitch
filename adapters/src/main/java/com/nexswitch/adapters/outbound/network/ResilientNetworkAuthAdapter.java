@@ -3,6 +3,7 @@ package com.nexswitch.adapters.outbound.network;
 import com.nexswitch.domain.model.AuthorizationResult;
 import com.nexswitch.domain.model.ReversalResult;
 import com.nexswitch.domain.model.Transaction;
+import com.nexswitch.domain.model.TransactionStatus;
 import com.nexswitch.domain.port.outbound.AuthorizationPort;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -64,5 +65,18 @@ public class ResilientNetworkAuthAdapter implements AuthorizationPort {
     public ReversalResult reverseFallback(Transaction transaction, Throwable t) {
         log.warn("network.circuit_open.reverse txnId={} cause={}", transaction.id(), t.getClass().getSimpleName());
         return new ReversalResult.Failed("UPSTREAM_UNAVAILABLE");
+    }
+
+    @Retry(name = RETRY_NAME)
+    @CircuitBreaker(name = CB_NAME, fallbackMethod = "inquireStatusFallback")
+    @Bulkhead(name = BH_NAME, type = Bulkhead.Type.SEMAPHORE)
+    @Override
+    public TransactionStatus inquireStatus(Transaction transaction) {
+        return delegate.inquireStatus(transaction);
+    }
+
+    public TransactionStatus inquireStatusFallback(Transaction transaction, Throwable t) {
+        log.warn("network.circuit_open.inquire txnId={} cause={}", transaction.id(), t.getClass().getSimpleName());
+        return null;
     }
 }

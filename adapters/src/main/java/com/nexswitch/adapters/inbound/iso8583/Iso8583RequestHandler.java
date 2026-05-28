@@ -14,6 +14,7 @@ import org.jpos.iso.ISOMsg;
 import org.jpos.iso.packager.GenericPackager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.math.BigDecimal;
 import java.util.Currency;
@@ -70,6 +71,7 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
         }
 
         String bin6 = pan.substring(0, 6);
+        String cardLast4 = pan.length() >= 4 ? pan.substring(pan.length() - 4) : pan;
         PanHash panHash = PanHash.fromRawPan(pan);
         Money amount = parseAmount(req.getString(4), req.getString(49));
         TerminalId terminalId = TerminalId.of(sanitizeTerminalId(req.getString(41)));
@@ -77,11 +79,16 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
         SystemTraceAuditNumber stan = SystemTraceAuditNumber.of(req.getString(11));
         String posEntryMode = req.getString(22) != null ? req.getString(22) : "000";
 
+        MDC.put("merchantId", merchantId.value());
+        MDC.put("cardLast4", cardLast4);
+
         // LEARN: Field 55 carries the EMV TLV blob; we parse Tag 9F26 (ARQC) and Tag 9F36 (ATC)
         //        here at the inbound boundary so the domain receives typed EmvData, not raw bytes.
         //        Field 53 (Key Management Data) carries the 10-byte KSN for DUKPT PIN flows.
+        UUID transactionId = UUID.randomUUID();
+        MDC.put("transactionId", transactionId.toString());
         AuthorizationCommand command = new AuthorizationCommand(
-                UUID.randomUUID(),
+                transactionId,
                 merchantId,
                 terminalId,
                 bin6,
@@ -93,7 +100,8 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
                 EmvTlvParser.parse(req.getBytes(55)),
                 req.getBytes(52),
                 req.getBytes(53),
-                posEntryMode
+                posEntryMode,
+                cardLast4
         );
 
         // LEARN: Load shedding — when the HSM or network circuit is OPEN, Resilience4j throws
