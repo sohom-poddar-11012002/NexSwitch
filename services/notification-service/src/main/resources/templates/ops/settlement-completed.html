@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Settlement Completed — NexSwitch</title></head>
+<body>
+<h2>Daily Settlement Summary</h2>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><th>Settlement Date</th><td th:text="${settlementDate}">2026-05-29</td></tr>
+  <tr><th>Settled Transactions</th><td th:text="${settledCount}">0</td></tr>
+  <tr><th>Total Amount (INR)</th><td th:text="${totalAmount}">0.00</td></tr>
+  <tr><th>File Name</th><td th:text="${fileName}">settlement-2026-05-29.csv</td></tr>
+</table>
+<p>Settlement file has been stored. Payout run scheduled for 09:00 IST.</p>
+<p><em>NexSwitch Settlement System — auto-generated, do not reply</em></p>
+</body>
+</html>

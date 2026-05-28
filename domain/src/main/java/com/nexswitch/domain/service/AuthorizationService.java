@@ -33,6 +33,8 @@ public class AuthorizationService implements ProcessPaymentUseCase {
     private static final String RC_EXCEEDS_LIMIT         = "61";
     private static final String RC_ARQC_FAILED           = "82";
     private static final String RC_FRAUD_DECLINE         = "59";
+    private static final String RC_REPLAY_ATTACK         = "62";
+    private static final String RC_FALLBACK_EXCEEDED     = "57";
 
     // LEARN: FraudThreshold — probability above which we block rather than forward to network.
     //        0.80 means "80% chance of fraud". Production tunes this per card product / MCC.
@@ -52,8 +54,22 @@ public class AuthorizationService implements ProcessPaymentUseCase {
     private final TransactionRepository transactionRepository;
     private final TransactionStateMachine stateMachine;
     private final AuditPort             auditPort;
+    private final AtcWatermarkPort      atcWatermarkPort;
+    private final FallbackCounterPort   fallbackCounterPort;
     private final Clock clock;
 
+    private static final AtcWatermarkPort NO_OP_ATC = new AtcWatermarkPort() {
+        @Override public boolean isAtcFresh(com.nexswitch.domain.model.vo.PanHash p, int a) { return true; }
+        @Override public void updateWatermark(com.nexswitch.domain.model.vo.PanHash p, int a) {}
+    };
+
+    private static final FallbackCounterPort NO_OP_FALLBACK = new FallbackCounterPort() {
+        @Override public int getAndIncrementFallbackCount(
+                com.nexswitch.domain.model.vo.PanHash p,
+                com.nexswitch.domain.model.vo.TerminalId t) { return 0; }
+    };
+
+    /** Backward-compat constructor for tests that don't inject ATC or fallback ports. */
     public AuthorizationService(
             BinLookupPort binLookupPort,
             IdempotencyPort idempotencyPort,
@@ -66,9 +82,11 @@ public class AuthorizationService implements ProcessPaymentUseCase {
             TransactionStateMachine stateMachine) {
         this(binLookupPort, idempotencyPort, terminalRepository, merchantRepository,
              hsmPort, fraudScoringPort, authorizationPort, transactionRepository,
-             stateMachine, Clock.systemUTC(), (a, b, c, d, e, f, g, h) -> {});
+             stateMachine, Clock.systemUTC(), (a, b, c, d, e, f, g, h) -> {},
+             NO_OP_ATC, NO_OP_FALLBACK);
     }
 
+    /** Backward-compat constructor for tests that inject audit but not ATC/fallback ports. */
     public AuthorizationService(
             BinLookupPort binLookupPort,
             IdempotencyPort idempotencyPort,
@@ -81,6 +99,27 @@ public class AuthorizationService implements ProcessPaymentUseCase {
             TransactionStateMachine stateMachine,
             Clock clock,
             AuditPort auditPort) {
+        this(binLookupPort, idempotencyPort, terminalRepository, merchantRepository,
+             hsmPort, fraudScoringPort, authorizationPort, transactionRepository,
+             stateMachine, clock, auditPort,
+             NO_OP_ATC, NO_OP_FALLBACK);
+    }
+
+    /** Full constructor with all security ports. */
+    public AuthorizationService(
+            BinLookupPort binLookupPort,
+            IdempotencyPort idempotencyPort,
+            TerminalRepository terminalRepository,
+            MerchantRepository merchantRepository,
+            HsmPort hsmPort,
+            FraudScoringPort fraudScoringPort,
+            AuthorizationPort authorizationPort,
+            TransactionRepository transactionRepository,
+            TransactionStateMachine stateMachine,
+            Clock clock,
+            AuditPort auditPort,
+            AtcWatermarkPort atcWatermarkPort,
+            FallbackCounterPort fallbackCounterPort) {
         this.binLookupPort         = binLookupPort;
         this.idempotencyPort       = idempotencyPort;
         this.terminalRepository    = terminalRepository;
@@ -91,6 +130,8 @@ public class AuthorizationService implements ProcessPaymentUseCase {
         this.transactionRepository = transactionRepository;
         this.stateMachine          = stateMachine;
         this.auditPort             = auditPort;
+        this.atcWatermarkPort      = atcWatermarkPort;
+        this.fallbackCounterPort   = fallbackCounterPort;
         this.clock                 = clock;
     }
 
@@ -162,7 +203,30 @@ public class AuthorizationService implements ProcessPaymentUseCase {
             hsmPort.translatePinBlock(cmd.pinBlock(), bytesToHex(cmd.ksn()), "zpk");
         }
 
-        // ── Step 6b: HSM ARQC verification ────────────────────────────────
+        // ── Step 6b: ATC replay attack detection ──────────────────────────
+        // LEARN: ATC watermark check — if ATC ≤ last_seen_atc the chip has been replayed.
+        //        Cloned EMV cards are caught here because they cannot advance the ATC past what
+        //        the genuine card already recorded. Response code "62" = Restricted card.
+        if (cmd.emvData() != null && !atcWatermarkPort.isAtcFresh(cmd.panHash(), cmd.emvData().atc())) {
+            Transaction declined = txn.decline(RC_REPLAY_ATTACK);
+            transactionRepository.save(declined);
+            return new AuthorizationResult.Declined(RC_REPLAY_ATTACK, "REPLAY_ATTACK_SUSPECTED");
+        }
+
+        // ── Step 6c: Magstripe fallback limit ──────────────────────────────
+        // LEARN: Magstripe fallback limit — Visa allows max 2, Mastercard max 3 per card/terminal/day.
+        //        Attackers induce chip failure to expose PAN in plaintext; this limit stops them.
+        if (cmd.paymentMethod() == com.nexswitch.domain.model.PaymentMethod.MAGSTRIPE) {
+            int fallbackCount = fallbackCounterPort.getAndIncrementFallbackCount(cmd.panHash(), cmd.terminalId());
+            int maxFallbacks  = cmd.network() == com.nexswitch.domain.model.PaymentNetwork.VISA ? 2 : 3;
+            if (fallbackCount >= maxFallbacks) {
+                Transaction declined = txn.decline(RC_FALLBACK_EXCEEDED);
+                transactionRepository.save(declined);
+                return new AuthorizationResult.Declined(RC_FALLBACK_EXCEEDED, "FALLBACK_LIMIT_EXCEEDED");
+            }
+        }
+
+        // ── Step 6d: HSM ARQC verification ────────────────────────────────
         // LEARN: ARQC (Application Request Cryptogram) is an 8-byte MAC generated by the EMV chip
         //        using a session key derived from the card's master key and ATC (Application Transaction Counter).
         //        Verifying it proves the physical card (not just stolen card data) was present.
@@ -182,6 +246,8 @@ public class AuthorizationService implements ProcessPaymentUseCase {
                 transactionRepository.save(declined);
                 return new AuthorizationResult.Declined(RC_ARQC_FAILED, "ARQC_VERIFICATION_FAILED");
             }
+            // Update ATC watermark after successful ARQC verification
+            atcWatermarkPort.updateWatermark(cmd.panHash(), cmd.emvData().atc());
         }
 
         // ── Step 7: Fraud score ────────────────────────────────────────────

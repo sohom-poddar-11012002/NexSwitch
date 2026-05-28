@@ -4,10 +4,14 @@ import com.nexswitch.domain.model.AuthorizationResult;
 import com.nexswitch.domain.port.inbound.AuthorizationCommand;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.time.Instant;
 
 // LEARN: AOP metrics aspect — cross-cutting concern in the adapter layer; domain stays pure.
 //        Intercepts ProcessPaymentUseCase.execute() and records counters without any domain code change.
@@ -28,7 +32,18 @@ public class PaymentMetricsAspect {
         String scheme   = cmd.network().name().toLowerCase();
         String currency = cmd.amount().currency().getCurrencyCode();
 
+        // LEARN: Timer records end-to-end authorization latency per network scheme.
+        //        p95 latency is the key SLA metric for payment networks (Visa target: <2s).
+        Instant start = Instant.now();
         Object raw = pjp.proceed();
+        long latencyMs = Duration.between(start, Instant.now()).toMillis();
+
+        Timer.builder("payment_network_latency_ms")
+                .tag("scheme", scheme)
+                .description("End-to-end authorization latency per payment network")
+                .register(registry)
+                .record(Duration.ofMillis(latencyMs));
+
         if (!(raw instanceof AuthorizationResult result)) return raw;
 
         switch (result) {

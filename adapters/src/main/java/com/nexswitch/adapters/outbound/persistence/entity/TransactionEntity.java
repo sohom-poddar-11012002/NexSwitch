@@ -47,6 +47,12 @@ public class TransactionEntity {
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
 
+    @Column(name = "approved_amount", precision = 15, scale = 2)
+    private BigDecimal approvedAmount;
+
+    @Column(name = "approved_currency", length = 3)
+    private String approvedCurrency;
+
     @Column(name = "status", nullable = false, length = 30)
     private String status;
 
@@ -130,6 +136,12 @@ public class TransactionEntity {
 
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }
+
+    public BigDecimal getApprovedAmount() { return approvedAmount; }
+    public void setApprovedAmount(BigDecimal approvedAmount) { this.approvedAmount = approvedAmount; }
+
+    public String getApprovedCurrency() { return approvedCurrency; }
+    public void setApprovedCurrency(String approvedCurrency) { this.approvedCurrency = approvedCurrency; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

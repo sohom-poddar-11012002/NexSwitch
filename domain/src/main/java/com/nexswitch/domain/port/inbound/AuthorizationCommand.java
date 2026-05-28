@@ -12,6 +12,7 @@ import java.util.UUID;
 //        bin6 (first 6 PAN digits) is PCI-safe to store — only the full PAN requires hashing.
 //        ksn = Field 53 (10-byte Key Serial Number) carries the DUKPT counter; null for non-chip flows.
 //        emvData = null for non-chip flows (contactless, QR); present for EMV chip (posEntryMode 05x).
+//        cavv = 3DS 2.x Cardholder Authentication Verification Value; eci = Electronic Commerce Indicator.
 public record AuthorizationCommand(
         UUID transactionId,
         MerchantId merchantId,
@@ -26,7 +27,9 @@ public record AuthorizationCommand(
         byte[] pinBlock,
         byte[] ksn,
         String posEntryMode,
-        String cardLast4
+        String cardLast4,
+        String cavv,
+        String eci
 ) {
     public AuthorizationCommand {
         Objects.requireNonNull(transactionId, "transactionId must not be null");

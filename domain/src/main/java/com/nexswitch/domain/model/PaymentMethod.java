@@ -4,11 +4,12 @@ package com.nexswitch.domain.model;
 public enum PaymentMethod {
     CARD_CHIP,
     CONTACTLESS,
+    MAGSTRIPE,
     UPI_QR,
     UPI_COLLECT;
 
     public boolean isCard() {
-        return this == CARD_CHIP || this == CONTACTLESS;
+        return this == CARD_CHIP || this == CONTACTLESS || this == MAGSTRIPE;
     }
 
     public boolean isUpi() {

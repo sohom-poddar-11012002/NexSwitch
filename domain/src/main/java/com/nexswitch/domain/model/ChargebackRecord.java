@@ -4,16 +4,21 @@ import com.nexswitch.domain.model.vo.AcquirerReferenceNumber;
 import com.nexswitch.domain.model.vo.Money;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Currency;
 import java.util.UUID;
 
 // LEARN: RichDomainModel — chargeback has its own lifecycle (responseDeadline, status) independent of Transaction
+// LEARN: evidenceDeadline — Visa gives 20 calendar days from chargeback date; Mastercard gives 45 days.
+//        Missing this deadline auto-loses the dispute — tracking it in the domain prevents costly write-offs.
 public record ChargebackRecord(
     UUID id,
     UUID transactionId,
     AcquirerReferenceNumber arn,
     PaymentNetwork network,
     String reasonCode,
+    String reasonDescription,
+    LocalDate evidenceDeadline,
     Money amount,
     Money chargebackFee,
     Status status,
@@ -30,6 +35,7 @@ public record ChargebackRecord(
         if (status == null) throw new IllegalArgumentException("status must not be null");
         if (responseDeadline == null) throw new IllegalArgumentException("responseDeadline must not be null");
         if (receivedAt == null) throw new IllegalArgumentException("receivedAt must not be null");
+        // reasonDescription and evidenceDeadline are nullable — may not be present in all network notifications
     }
 
     public Money totalLiability() {

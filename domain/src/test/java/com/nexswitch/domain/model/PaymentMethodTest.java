@@ -8,7 +8,8 @@ class PaymentMethodTest {
 
     @Test
     void enumHasFourValues() {
-        assertThat(PaymentMethod.values()).hasSize(4);
+        // N82 added MAGSTRIPE for fallback counter tracking
+        assertThat(PaymentMethod.values()).hasSize(5);
     }
 
     @Test
@@ -16,6 +17,7 @@ class PaymentMethodTest {
         assertThat(PaymentMethod.values()).containsExactlyInAnyOrder(
             PaymentMethod.CARD_CHIP,
             PaymentMethod.CONTACTLESS,
+            PaymentMethod.MAGSTRIPE,
             PaymentMethod.UPI_QR,
             PaymentMethod.UPI_COLLECT
         );

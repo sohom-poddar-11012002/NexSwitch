@@ -99,6 +99,9 @@ hsm:
 storage:
   provider: ${STORAGE_PROVIDER:local}
 
+security:
+  api-key: ${API_KEY:dev-api-key-change-me}
+
 qr:
   session:
     ttl-minutes: 5
@@ -170,4 +173,4 @@ management:
         liveness:
           include: livenessState
         readiness:
-          include: readinessState,db,redis,hsmHealthIndicator,kafkaCustomHealthIndicator
+          include: readinessState,db,redis,hsmHealthIndicator,kafkaCustomHealthIndicator,networkSwitchHealthIndicator,redisCustomHealthIndicator

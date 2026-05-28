@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Settlement Processed — NexSwitch</title></head>
+<body>
+<h2>Settlement Confirmation</h2>
+<p>Your settlement for <strong th:text="${settlementDate}">2026-05-29</strong> has been processed.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><th>Merchant ID</th><td th:text="${merchantId}">MERCH001</td></tr>
+  <tr><th>Settlement Date</th><td th:text="${settlementDate}">2026-05-29</td></tr>
+  <tr><th>Transaction Count</th><td th:text="${transactionCount}">0</td></tr>
+  <tr><th>Gross Amount (INR)</th><td th:text="${grossAmount}">0.00</td></tr>
+  <tr><th>MDR Deducted (INR)</th><td th:text="${mdrAmount}">0.00</td></tr>
+  <tr><th>Net Payout (INR)</th><td th:text="${netAmount}">0.00</td></tr>
+  <tr><th>Bank Account</th><td th:text="${bankAccount}">XXXX1234</td></tr>
+  <tr><th>Expected Credit</th><td th:text="${expectedCreditDate}">T+1</td></tr>
+</table>
+<p><em>NexSwitch Settlement System — auto-generated, do not reply</em></p>
+</body>
+</html>
