@@ -45,12 +45,11 @@ public abstract class IntegrationTestBase {
             .withCommand("redis-server", "--requirepass", "test_password")
             .withReuse(true);
 
-    // LEARN: apache/kafka KRaft mode rejects 0.0.0.0 as advertised.listener.
-    //        withListener() tells TC to bind the external listener to the container's routable address.
+    // LEARN: TC 2.x KafkaContainer defaults to apache/kafka (official ASF image, KRaft-only).
+    //        confluentinc/cp-kafka has different startup log patterns so its wait strategy fails.
     @Container
     static final KafkaContainer KAFKA =
         new KafkaContainer(DockerImageName.parse("apache/kafka:3.9.0"))
-            .withListener(() -> "kafka:19092")
             .withReuse(true);
 
     @DynamicPropertySource
