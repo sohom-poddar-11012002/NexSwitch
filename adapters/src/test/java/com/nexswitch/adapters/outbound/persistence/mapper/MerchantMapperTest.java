@@ -21,7 +21,7 @@ class MerchantMapperTest {
 
     @BeforeEach
     void setUp() {
-        mapper = new MerchantMapperImpl();
+        mapper = new MerchantMapper() {};
     }
 
     // ── toEntity ─────────────────────────────────────────────────────────────
