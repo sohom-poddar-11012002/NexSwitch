@@ -67,7 +67,12 @@
     </dependencies>
 
     <profiles>
-        <!-- ContainerStartupIT requires Docker — only run under -P integration-tests -->
+        <!--
+            The root pom's integration-tests profile adds failsafe to every module.
+            test-support is a shared test library, not a service — ContainerStartupIT
+            is a local dev smoke test for Docker setup, not a CI integration test.
+            Override failsafe with skip=true so it wins over the root binding.
+        -->
         <profile>
             <id>integration-tests</id>
             <build>
@@ -76,11 +81,7 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <configuration>
-                            <!-- Pass DOCKER_HOST to forked JVM — required for non-standard sockets (OrbStack on Mac) -->
-                            <environmentVariables>
-                                <DOCKER_HOST>${env.DOCKER_HOST}</DOCKER_HOST>
-                                <TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>${env.TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE}</TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>
-                            </environmentVariables>
+                            <skip>true</skip>
                         </configuration>
                     </plugin>
                 </plugins>
