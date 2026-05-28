@@ -26,6 +26,7 @@ public final class Transaction {
     private final AuthorizationCode authorizationCode;
     private final AcquirerReferenceNumber arn;
     private final String responseCode;
+    private final String cardLast4;
     private final Instant createdAt;
     private final Instant updatedAt;
     private final List<DomainEvent<?>> domainEvents;
@@ -54,6 +55,7 @@ public final class Transaction {
         this.authorizationCode = builder.authorizationCode;
         this.arn = builder.arn;
         this.responseCode = builder.responseCode;
+        this.cardLast4 = builder.cardLast4;
         this.createdAt = builder.createdAt;
         this.updatedAt = builder.updatedAt != null ? builder.updatedAt : builder.createdAt;
         this.domainEvents = new ArrayList<>(builder.domainEvents);
@@ -73,6 +75,7 @@ public final class Transaction {
     public AuthorizationCode authorizationCode() { return authorizationCode; }
     public AcquirerReferenceNumber arn() { return arn; }
     public String responseCode() { return responseCode; }
+    public String cardLast4() { return cardLast4; }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }
     public List<DomainEvent<?>> domainEvents() { return Collections.unmodifiableList(domainEvents); }
@@ -232,6 +235,7 @@ public final class Transaction {
         b.authorizationCode = this.authorizationCode;
         b.arn = this.arn;
         b.responseCode = this.responseCode;
+        b.cardLast4 = this.cardLast4;
         b.createdAt = this.createdAt;
         b.updatedAt = this.updatedAt;
         b.domainEvents = new ArrayList<>(this.domainEvents);
@@ -253,6 +257,7 @@ public final class Transaction {
         private AuthorizationCode authorizationCode;
         private AcquirerReferenceNumber arn;
         private String responseCode;
+        private String cardLast4;
         private Instant createdAt;
         private Instant updatedAt;
         private List<DomainEvent<?>> domainEvents = new ArrayList<>();
@@ -269,6 +274,7 @@ public final class Transaction {
         public Builder authorizationCode(AuthorizationCode authorizationCode) { this.authorizationCode = authorizationCode; return this; }
         public Builder arn(AcquirerReferenceNumber arn) { this.arn = arn; return this; }
         public Builder responseCode(String responseCode) { this.responseCode = responseCode; return this; }
+        public Builder cardLast4(String cardLast4) { this.cardLast4 = cardLast4; return this; }
         public Builder createdAt(Instant createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(Instant updatedAt) { this.updatedAt = updatedAt; return this; }
 

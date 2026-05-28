@@ -1,0 +1,56 @@
+scenario:
+  id: chargeback-received
+  name: "Chargeback lifecycle — dispute received and contested"
+  description: >
+    Simulates an inbound chargeback on a previously authorised transaction.
+    Status must transition AUTHORIZED → CHARGEBACK_RECEIVED.
+    A second call contests the chargeback and expects CHARGEBACK_CONTESTED.
+  platform: acquiring-service
+  project: payments
+  feature: chargeback
+  channel: REST
+
+  variables:
+    merchant_id: "MERCH0000999"
+    original_txn_id: "00000000-0000-0000-0000-000000000001"
+    chargeback_reason: "FRAUDULENT"
+    chargeback_amount_paise: "000000200000"
+
+  steps:
+    # Step 1 — Notify platform of inbound chargeback from network
+    - type: send
+      channel: REST
+      operation: POST /api/v1/chargebacks
+      payload:
+        transaction_id: "{{original_txn_id}}"
+        merchant_id: "{{merchant_id}}"
+        reason_code: "{{chargeback_reason}}"
+        amount_paise: "{{chargeback_amount_paise}}"
+        currency: "356"
+      timeout_ms: 5000
+      capture_response_as: chargeback_response
+
+    - type: assert
+      expression: "chargeback_response['chargeback_id'] != null"
+      description: "Chargeback record must be created"
+      fail_fast: true
+
+    - type: inject_variable
+      name: chargeback_id
+      value: "{{chargeback_response['chargeback_id']}}"
+
+    # Step 2 — Contest the chargeback with evidence
+    - type: send
+      channel: REST
+      operation: POST /api/v1/chargebacks/{{chargeback_id}}/contest
+      payload:
+        evidence_type: "RECEIPT"
+        evidence_url: "https://storage.example.com/receipt-qa-001.pdf"
+        notes: "Customer physically present at terminal"
+      timeout_ms: 5000
+      capture_response_as: contest_response
+
+    - type: assert
+      expression: "contest_response['status'] == 'CHARGEBACK_CONTESTED'"
+      description: "Chargeback must transition to CONTESTED after evidence submission"
+      fail_fast: true

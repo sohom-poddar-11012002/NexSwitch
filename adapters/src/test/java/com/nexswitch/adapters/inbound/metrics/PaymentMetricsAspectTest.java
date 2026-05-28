@@ -82,7 +82,7 @@ class PaymentMetricsAspectTest {
                 PaymentNetwork.VISA,
                 PaymentMethod.CARD_CHIP,
                 new SystemTraceAuditNumber("000001"),
-                null, null, null, "051");
+                null, null, null, "051", "1111");
         ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
         when(pjp.getArgs()).thenReturn(new Object[]{cmd});
         when(pjp.proceed()).thenReturn(result);

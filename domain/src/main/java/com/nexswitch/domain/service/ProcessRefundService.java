@@ -5,6 +5,7 @@ import com.nexswitch.domain.model.Transaction;
 import com.nexswitch.domain.model.TransactionStatus;
 import com.nexswitch.domain.port.inbound.ProcessRefundUseCase;
 import com.nexswitch.domain.port.inbound.RefundCommand;
+import com.nexswitch.domain.port.outbound.AuditPort;
 import com.nexswitch.domain.port.outbound.RefundPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
 
@@ -16,10 +17,20 @@ public class ProcessRefundService implements ProcessRefundUseCase {
 
     private final TransactionRepository transactionRepository;
     private final RefundPort refundPort;
+    private final TransactionStateMachine stateMachine;
+    private final AuditPort auditPort;
 
     public ProcessRefundService(TransactionRepository transactionRepository, RefundPort refundPort) {
+        this(transactionRepository, refundPort, new TransactionStateMachine(),
+             (a, b, c, d, e, f, g, h) -> {});
+    }
+
+    public ProcessRefundService(TransactionRepository transactionRepository, RefundPort refundPort,
+                                 TransactionStateMachine stateMachine, AuditPort auditPort) {
         this.transactionRepository = transactionRepository;
         this.refundPort = refundPort;
+        this.stateMachine = stateMachine;
+        this.auditPort = auditPort;
     }
 
     @Override
@@ -40,8 +51,12 @@ public class ProcessRefundService implements ProcessRefundUseCase {
         }
         RefundResult result = refundPort.requestRefund(txn, command.refundAmount());
         if (result instanceof RefundResult.Initiated) {
-            Transaction updated = txn.withStatus(TransactionStatus.REFUND_INITIATED);
+            String prevStatus = txn.status().name();
+            Transaction updated = stateMachine.transition(txn, TransactionStatus.REFUND_INITIATED);
             transactionRepository.save(updated);
+            auditPort.record("REFUND_INITIATED", "refund-service",
+                    txn.id(), txn.id().toString(), "TRANSACTION",
+                    prevStatus, TransactionStatus.REFUND_INITIATED.name(), null);
         }
         return result;
     }

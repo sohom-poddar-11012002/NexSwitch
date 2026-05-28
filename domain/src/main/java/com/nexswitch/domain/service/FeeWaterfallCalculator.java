@@ -25,12 +25,16 @@ public class FeeWaterfallCalculator {
         INTERCHANGE.put(MASTERCARD, Map.of("CREDIT", new BigDecimal("0.0175"), "DEBIT", new BigDecimal("0.0085")));
         INTERCHANGE.put(RUPAY,      Map.of("CREDIT", new BigDecimal("0.0100"), "DEBIT", new BigDecimal("0.0060")));
         INTERCHANGE.put(UPI,        Map.of("CREDIT", BigDecimal.ZERO,           "DEBIT", BigDecimal.ZERO));
+        INTERCHANGE.put(AMEX,       Map.of("CREDIT", new BigDecimal("0.0200"), "DEBIT", new BigDecimal("0.0200")));
+        INTERCHANGE.put(DINERS,     Map.of("CREDIT", new BigDecimal("0.0175"), "DEBIT", new BigDecimal("0.0175")));
 
         ASSESSMENT = new EnumMap<>(PaymentNetwork.class);
         ASSESSMENT.put(VISA,       new BigDecimal("0.0014"));
         ASSESSMENT.put(MASTERCARD, new BigDecimal("0.0013"));
         ASSESSMENT.put(RUPAY,      new BigDecimal("0.0006"));
         ASSESSMENT.put(UPI,        BigDecimal.ZERO);
+        ASSESSMENT.put(AMEX,       new BigDecimal("0.0015"));
+        ASSESSMENT.put(DINERS,     new BigDecimal("0.0013"));
     }
 
     private static final BigDecimal DEFAULT_MINIMUM_MDR = new BigDecimal("2.00");

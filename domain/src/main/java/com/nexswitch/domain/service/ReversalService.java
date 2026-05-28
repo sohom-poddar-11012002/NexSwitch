@@ -4,6 +4,7 @@ import com.nexswitch.domain.exception.InvalidStateTransitionException;
 import com.nexswitch.domain.model.*;
 import com.nexswitch.domain.port.inbound.ProcessReversalUseCase;
 import com.nexswitch.domain.port.inbound.ReversalCommand;
+import com.nexswitch.domain.port.outbound.AuditPort;
 import com.nexswitch.domain.port.outbound.AuthorizationPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
 
@@ -18,14 +19,25 @@ public class ReversalService implements ProcessReversalUseCase {
     private final TransactionRepository transactionRepository;
     private final AuthorizationPort     authorizationPort;
     private final TransactionStateMachine stateMachine;
+    private final AuditPort             auditPort;
 
     public ReversalService(
             TransactionRepository transactionRepository,
             AuthorizationPort authorizationPort,
             TransactionStateMachine stateMachine) {
+        this(transactionRepository, authorizationPort, stateMachine,
+             (a, b, c, d, e, f, g, h) -> {});
+    }
+
+    public ReversalService(
+            TransactionRepository transactionRepository,
+            AuthorizationPort authorizationPort,
+            TransactionStateMachine stateMachine,
+            AuditPort auditPort) {
         this.transactionRepository = transactionRepository;
         this.authorizationPort     = authorizationPort;
         this.stateMachine          = stateMachine;
+        this.auditPort             = auditPort;
     }
 
     @Override
@@ -69,8 +81,11 @@ public class ReversalService implements ProcessReversalUseCase {
             case ReversalResult.Failed          ignored -> TransactionStatus.UNKNOWN;
         };
 
+        String prevStatus = txn.status().name();
         txn = stateMachine.transition(txn, finalStatus);
         transactionRepository.save(txn);
+        auditPort.record("TRANSACTION_REVERSED", "reversal-service",
+                txn.id(), txn.id().toString(), "TRANSACTION", prevStatus, finalStatus.name(), null);
 
         return networkResult;
     }

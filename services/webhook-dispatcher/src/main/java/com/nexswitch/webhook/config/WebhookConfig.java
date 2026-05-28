@@ -17,8 +17,10 @@ import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.Map;
 
 // LEARN: CompositionRoot — all infrastructure beans wired here; service classes stay free of @Autowired.
@@ -40,7 +42,15 @@ public class WebhookConfig {
 
     @Bean
     public WebhookDeliveryService.HttpSender restClientHttpSender() {
+        // LEARN: Explicit connect + read timeout — without this, a non-responding merchant endpoint
+        //        holds the @KafkaListener thread indefinitely, eventually exhausting the thread pool.
+        //        Spec mandates 5s webhook timeout; we apply it at the HTTP transport layer.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(5));
+
         RestClient restClient = RestClient.builder()
+                .requestFactory(factory)
                 .defaultHeader("User-Agent", "NexSwitch-WebhookDispatcher/1.0")
                 .build();
 

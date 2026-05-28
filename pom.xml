@@ -282,4 +282,21 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- LEARN: Profiles — -P integration-tests activates failsafe to run @Tag("integration")
+         tests against real Postgres/Redis/Kafka via Testcontainers. Not included in default
+         build so unit-test CI stays fast; integration CI stage uses this profile explicitly. -->
+    <profiles>
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

@@ -19,7 +19,8 @@ import java.util.UUID;
 @Order(1)
 public class MdcRequestFilter extends OncePerRequestFilter {
 
-    static final String TRACE_ID_HEADER = "X-Trace-Id";
+    static final String TRACE_ID_HEADER   = "X-Trace-Id";
+    static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,11 +31,13 @@ public class MdcRequestFilter extends OncePerRequestFilter {
             if (traceId == null || traceId.isBlank()) {
                 traceId = UUID.randomUUID().toString();
             }
+            String requestId = UUID.randomUUID().toString();
             MDC.put("traceId",   traceId);
-            MDC.put("requestId", UUID.randomUUID().toString());
+            MDC.put("requestId", requestId);
             // LEARN: traceId echoed back so callers can correlate client logs with server logs
             //        without a distributed tracing agent. Cheap substitute for Zipkin in early dev.
-            response.setHeader(TRACE_ID_HEADER, traceId);
+            response.setHeader(TRACE_ID_HEADER,   traceId);
+            response.setHeader(REQUEST_ID_HEADER, requestId);
             chain.doFilter(request, response);
         } finally {
             // LEARN: MDC.clear() must be in finally — any exception before chain.doFilter would

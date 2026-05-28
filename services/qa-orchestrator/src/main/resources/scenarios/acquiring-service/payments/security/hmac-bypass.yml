@@ -13,7 +13,7 @@ scenario:
   steps:
     - type: send
       channel: REST
-      operation: "POST /api/webhooks/test"
+      operation: "POST /api/webhooks/inbound"
       payload:
         url: "{{acquiring_url}}/api/webhooks/test"
         headers:

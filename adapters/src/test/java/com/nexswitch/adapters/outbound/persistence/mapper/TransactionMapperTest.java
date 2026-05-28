@@ -96,9 +96,11 @@ class TransactionMapperTest {
         TransactionEntity entity = mapper.toEntity(domain);
 
         assertThat(entity.getRrn()).isNull();
+        // cardLast4 is populated from Transaction.cardLast4() if present (null in fixture = null here)
         assertThat(entity.getCardLast4()).isNull();
         assertThat(entity.getRiskScore()).isNull();
-        assertThat(entity.getIdempotencyKey()).isNull();
+        // idempotencyKey is always derived from terminalId:stan — never null after N47 fix
+        assertThat(entity.getIdempotencyKey()).isNotNull();
         assertThat(entity.getNpciTxnId()).isNull();
         assertThat(entity.getQrTxnRef()).isNull();
         assertThat(entity.getVersion()).isNull();

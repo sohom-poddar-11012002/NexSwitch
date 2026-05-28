@@ -4,7 +4,9 @@ import com.nexswitch.adapters.outbound.persistence.jpa.JpaTransactionRepository;
 import com.nexswitch.adapters.outbound.persistence.mapper.TransactionMapper;
 import com.nexswitch.domain.model.Transaction;
 import com.nexswitch.domain.model.TransactionStatus;
+import com.nexswitch.domain.model.event.DomainEvent;
 import com.nexswitch.domain.model.vo.AcquirerReferenceNumber;
+import com.nexswitch.domain.port.outbound.DomainEventPublisherPort;
 import com.nexswitch.domain.port.outbound.TransactionRepository;
 import org.springframework.stereotype.Repository;
 
@@ -19,15 +21,24 @@ public class PostgresTransactionRepository implements TransactionRepository {
 
     private final JpaTransactionRepository jpa;
     private final TransactionMapper mapper;
+    private final DomainEventPublisherPort eventPublisher;
 
-    public PostgresTransactionRepository(JpaTransactionRepository jpa, TransactionMapper mapper) {
+    public PostgresTransactionRepository(JpaTransactionRepository jpa,
+                                          TransactionMapper mapper,
+                                          DomainEventPublisherPort eventPublisher) {
         this.jpa = jpa;
         this.mapper = mapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
     public Transaction save(Transaction transaction) {
-        return mapper.toDomain(jpa.save(mapper.toEntity(transaction)));
+        // LEARN: pullDomainEvents() clears the event list on the aggregate — must be called
+        //        before toEntity() so events are not lost when the builder copies state.
+        List<DomainEvent<?>> events = transaction.pullDomainEvents();
+        Transaction saved = mapper.toDomain(jpa.save(mapper.toEntity(transaction)));
+        events.forEach(eventPublisher::publish);
+        return saved;
     }
 
     @Override

@@ -32,6 +32,8 @@ public interface TransactionMapper {
             ? domain.authorizationCode().value() : null);
         e.setArn(domain.arn() != null ? domain.arn().value() : null);
         e.setResponseCode(domain.responseCode());
+        e.setIdempotencyKey(domain.terminalId().value() + ":" + domain.stan().value());
+        e.setCardLast4(domain.cardLast4());
         e.setCreatedAt(domain.createdAt());
         e.setUpdatedAt(domain.updatedAt());
         return e;
@@ -53,6 +55,7 @@ public interface TransactionMapper {
             .arn(entity.getArn() != null
                 ? AcquirerReferenceNumber.of(entity.getArn()) : null)
             .responseCode(entity.getResponseCode())
+            .cardLast4(entity.getCardLast4())
             .createdAt(entity.getCreatedAt())
             .updatedAt(entity.getUpdatedAt())
             .build();
