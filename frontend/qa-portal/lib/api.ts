@@ -1,6 +1,11 @@
+// LEARN: NEXT_PUBLIC_* vars are baked into the client bundle at build time — never use them
+//        for internal service URLs that only resolve inside Docker. Instead: server components
+//        read QA_ORCHESTRATOR_URL at runtime; client components call /api/qa (same-origin
+//        proxy route that forwards to qa-orchestrator on the Docker internal network).
 const isServer = typeof window === "undefined";
-const BASE          = process.env.NEXT_PUBLIC_QA_API ?? (isServer ? "http://localhost:8700/api/qa" : "/api/qa");
-const RECORDER_BASE = isServer ? "http://localhost:8700" : "";
+const ORCHESTRATOR = process.env.QA_ORCHESTRATOR_URL ?? "http://localhost:8700";
+const BASE          = isServer ? `${ORCHESTRATOR}/api/qa` : "/api/qa";
+const RECORDER_BASE = isServer ? ORCHESTRATOR : "/api/recorder";
 
 export type ChannelType = "ISO8583" | "REST" | "KAFKA_ASSERT" | "CHAOS" | "PLAYWRIGHT";
 export type ExecutionStatus = "PENDING" | "RUNNING" | "PASSED" | "FAILED" | "CANCELLED";

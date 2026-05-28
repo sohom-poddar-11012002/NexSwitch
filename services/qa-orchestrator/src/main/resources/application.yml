@@ -10,9 +10,9 @@ spring:
       enabled: true
 
   datasource:
-    url: ${QA_DB_URL:jdbc:postgresql://localhost:5432/nexswitch}
-    username: ${QA_DB_USER:nexswitch}
-    password: ${QA_DB_PASSWORD:nexswitch}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nexswitch}
+    username: ${DB_USERNAME:nexswitch_app}
+    password: ${DB_PASSWORD:local_dev_password}
     hikari:
       connection-timeout: 3000
       maximum-pool-size: 10
