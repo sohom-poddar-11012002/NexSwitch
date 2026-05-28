@@ -66,20 +66,25 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <!-- Activate failsafe so ContainerStartupIT runs in the verify phase -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <configuration>
-                    <!-- Pass DOCKER_HOST to forked JVM — required for non-standard sockets (OrbStack on Mac) -->
-                    <environmentVariables>
-                        <DOCKER_HOST>${env.DOCKER_HOST}</DOCKER_HOST>
-                        <TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>${env.TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE}</TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>
-                    </environmentVariables>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    <profiles>
+        <!-- ContainerStartupIT requires Docker — only run under -P integration-tests -->
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <!-- Pass DOCKER_HOST to forked JVM — required for non-standard sockets (OrbStack on Mac) -->
+                            <environmentVariables>
+                                <DOCKER_HOST>${env.DOCKER_HOST}</DOCKER_HOST>
+                                <TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>${env.TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE}</TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>
+                            </environmentVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
