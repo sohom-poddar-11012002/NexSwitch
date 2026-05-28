@@ -37,7 +37,11 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- Web (needed for SecurityConfig filter chain references) -->
+        <!-- Web — required for OncePerRequestFilter (ApiKeyAuthFilter) and jakarta.servlet.* -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
