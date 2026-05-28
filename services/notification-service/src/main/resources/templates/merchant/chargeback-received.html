@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Chargeback Received — NexSwitch</title></head>
+<body>
+<h2>Chargeback Notice</h2>
+<p>A chargeback has been received for one of your transactions.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><th>Merchant ID</th><td th:text="${merchantId}">MERCH001</td></tr>
+  <tr><th>Transaction ID</th><td th:text="${transactionId}">N/A</td></tr>
+  <tr><th>Amount (INR)</th><td th:text="${amount}">0.00</td></tr>
+  <tr><th>Reason Code</th><td th:text="${reasonCode}">10.4</td></tr>
+  <tr><th>Reason</th><td th:text="${reasonDescription}">Fraud</td></tr>
+  <tr><th>Evidence Deadline</th><td th:text="${evidenceDeadline}">N/A</td></tr>
+</table>
+<p><strong>Action required:</strong> Submit evidence via the NexSwitch Merchant Dashboard before the deadline.</p>
+<p><em>NexSwitch Chargeback Management — auto-generated, do not reply</em></p>
+</body>
+</html>

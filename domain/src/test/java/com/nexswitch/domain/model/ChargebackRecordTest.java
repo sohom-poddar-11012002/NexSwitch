@@ -5,6 +5,7 @@ import com.nexswitch.domain.model.vo.Money;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Currency;
 import java.util.UUID;
 
@@ -21,6 +22,8 @@ class ChargebackRecordTest {
             AcquirerReferenceNumber.of("12345678901234567890123"),
             PaymentNetwork.VISA,
             "4853",
+            "Merchandise Not Received",    // reasonDescription
+            LocalDate.now().plusDays(20),  // evidenceDeadline
             Money.of("6000.00", INR),
             Money.of("350.00", INR),
             ChargebackRecord.Status.RECEIVED,
@@ -64,6 +67,7 @@ class ChargebackRecordTest {
             UUID.randomUUID(), null,
             AcquirerReferenceNumber.of("12345678901234567890123"),
             PaymentNetwork.VISA, "4853",
+            null, null,  // reasonDescription, evidenceDeadline: nullable
             Money.of("6000.00", INR), Money.of("350.00", INR),
             ChargebackRecord.Status.RECEIVED,
             Instant.now().plusSeconds(86400), Instant.now()

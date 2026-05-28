@@ -4,8 +4,8 @@ import com.nexswitch.domain.port.inbound.ProcessRefundUseCase;
 import com.nexswitch.domain.port.inbound.ReconcileUseCase;
 import com.nexswitch.domain.port.outbound.*;
 import com.nexswitch.domain.service.AuthorizationService;
-import java.time.Clock;
 import com.nexswitch.domain.service.GenerateQRService;
+import java.time.Clock;
 import com.nexswitch.domain.service.GenerateStaticQRService;
 import com.nexswitch.domain.service.InitiateCollectService;
 import com.nexswitch.domain.service.ProcessRefundService;
@@ -25,6 +25,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class AdapterConfig {
 
+    // LEARN: Exposing Clock as a @Bean lets any service use it via constructor injection.
+    //        Tests can override with a fixed Clock (Clock.fixed()) to control the current time.
+    @Bean
+    public Clock clock() {
+        return Clock.systemUTC();
+    }
+
     // LEARN: CompositionRoot — AuthorizationService is a pure domain class (no @Service annotation)
     //        so Spring cannot auto-discover it. We declare a @Bean here using domain port interfaces
     //        as parameters; Spring injects whichever @Component/@Repository is on the classpath.
@@ -39,7 +46,10 @@ public class AdapterConfig {
             FraudScoringPort fraudScoringPort,
             AuthorizationPort authorizationPort,
             TransactionRepository transactionRepository,
-            AuditPort auditPort) {
+            AuditPort auditPort,
+            AtcWatermarkPort atcWatermarkPort,
+            FallbackCounterPort fallbackCounterPort,
+            Clock clock) {
         return new AuthorizationService(
             binLookupPort,
             idempotencyPort,
@@ -50,8 +60,10 @@ public class AdapterConfig {
             authorizationPort,
             transactionRepository,
             new TransactionStateMachine(),
-            Clock.systemUTC(),
-            auditPort
+            clock,
+            auditPort,
+            atcWatermarkPort,
+            fallbackCounterPort
         );
     }
 

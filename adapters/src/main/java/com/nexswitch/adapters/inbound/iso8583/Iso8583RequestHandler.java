@@ -101,7 +101,9 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
                 req.getBytes(52),
                 req.getBytes(53),
                 posEntryMode,
-                cardLast4
+                cardLast4,
+                null, // cavv: 3DS not present in ISO 8583 terminal flow
+                null  // eci:  3DS not present in ISO 8583 terminal flow
         );
 
         // LEARN: Load shedding — when the HSM or network circuit is OPEN, Resilience4j throws

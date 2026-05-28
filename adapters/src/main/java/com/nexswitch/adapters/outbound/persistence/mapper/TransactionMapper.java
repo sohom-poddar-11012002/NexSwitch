@@ -34,12 +34,21 @@ public interface TransactionMapper {
         e.setResponseCode(domain.responseCode());
         e.setIdempotencyKey(domain.terminalId().value() + ":" + domain.stan().value());
         e.setCardLast4(domain.cardLast4());
+        if (domain.approvedAmount() != null) {
+            e.setApprovedAmount(domain.approvedAmount().amount());
+            e.setApprovedCurrency(domain.approvedAmount().currency().getCurrencyCode());
+        }
         e.setCreatedAt(domain.createdAt());
         e.setUpdatedAt(domain.updatedAt());
         return e;
     }
 
     default Transaction toDomain(TransactionEntity entity) {
+        Money approvedAmount = null;
+        if (entity.getApprovedAmount() != null && entity.getApprovedCurrency() != null) {
+            approvedAmount = Money.of(entity.getApprovedAmount(),
+                    Currency.getInstance(entity.getApprovedCurrency()));
+        }
         return Transaction.builder()
             .id(entity.getId())
             .merchantId(new MerchantId(entity.getMerchantId()))
@@ -56,6 +65,7 @@ public interface TransactionMapper {
                 ? AcquirerReferenceNumber.of(entity.getArn()) : null)
             .responseCode(entity.getResponseCode())
             .cardLast4(entity.getCardLast4())
+            .approvedAmount(approvedAmount)
             .createdAt(entity.getCreatedAt())
             .updatedAt(entity.getUpdatedAt())
             .build();

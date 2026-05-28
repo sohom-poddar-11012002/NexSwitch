@@ -11,7 +11,8 @@ class TransactionStatusTest {
 
     @Test
     void enumHasTwentyStates() {
-        assertThat(TransactionStatus.values()).hasSize(20);
+        // N68/N81/N89 added SETTLED, PAYOUT_INITIATED, RESERVE_RELEASED, EXPIRED
+        assertThat(TransactionStatus.values()).hasSize(24);
     }
 
     @ParameterizedTest
@@ -39,8 +40,13 @@ class TransactionStatusTest {
         "SETTLEMENT_PENDING,    RECONCILED",
         "RECONCILED,            PAID_OUT",
         "RECONCILED,            CHARGEBACK_RECEIVED",
+        "RECONCILED,            SETTLED",
         "PAID_OUT,              CHARGEBACK_RECEIVED",
         "PAID_OUT,              REFUND_INITIATED",
+        "PAID_OUT,              PAYOUT_INITIATED",
+        "SETTLED,               PAYOUT_INITIATED",
+        "PAYOUT_INITIATED,      RESERVE_RELEASED",
+        "AUTHORIZED,            EXPIRED",
         "CHARGEBACK_RECEIVED,   CHARGEBACK_CONTESTED",
         "CHARGEBACK_RECEIVED,   CHARGEBACK_LOST",
         "CHARGEBACK_CONTESTED,  CHARGEBACK_EVIDENCE_SUBMITTED",

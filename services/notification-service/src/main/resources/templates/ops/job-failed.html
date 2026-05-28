@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Job Failed — NexSwitch Ops</title></head>
+<body>
+<h2>&#9888; NexSwitch Job Failure Alert</h2>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><th>Job Name</th><td th:text="${jobName}">settlement-job</td></tr>
+  <tr><th>Date</th><td th:text="${jobDate}">2026-05-29</td></tr>
+  <tr><th>Error</th><td th:text="${errorMessage}">Unknown error</td></tr>
+  <tr><th>Timestamp</th><td th:text="${timestamp}">2026-05-29T23:30:00Z</td></tr>
+</table>
+<p>Please investigate immediately. Log correlation: <code th:text="${traceId}">N/A</code></p>
+<p><em>NexSwitch Operations Alert — auto-generated, do not reply</em></p>
+</body>
+</html>
