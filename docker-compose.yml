@@ -255,8 +255,18 @@ services:
     ports: ["9000:9000"]
     networks: [internal]
     environment:
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
+      DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local
-    depends_on: [webhook-dispatcher]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      webhook-dispatcher:
+        condition: service_started
 
   settlement-service:
     build:
