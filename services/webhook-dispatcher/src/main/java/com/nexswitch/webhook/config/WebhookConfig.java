@@ -9,6 +9,8 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
@@ -25,6 +27,8 @@ import java.util.Map;
 
 // LEARN: CompositionRoot — all infrastructure beans wired here; service classes stay free of @Autowired.
 @Configuration
+@EntityScan(basePackages = "com.nexswitch.webhook.persistence")
+@EnableJpaRepositories(basePackages = "com.nexswitch.webhook.persistence")
 public class WebhookConfig {
 
     private final String bootstrapServers;

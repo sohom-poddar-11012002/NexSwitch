@@ -3,6 +3,7 @@ package com.nexswitch.adapters.outbound.notification;
 import com.nexswitch.domain.port.outbound.NotificationPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Map;
 // LEARN: StubAdapter — logs the notification instead of sending email; swap for
 //        ThymeleafEmailNotificationAdapter when SMTP is wired in a later sprint.
 @Component
+@ConditionalOnMissingBean(NotificationPort.class)
 public class LoggingNotificationAdapter implements NotificationPort {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingNotificationAdapter.class);
