@@ -39,6 +39,11 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
+        <!-- Spring Boot 4.0 extracted Flyway autoconfigure into its own artifact -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
 
         <!-- Kafka (KafkaAssertionAdapter — manual consumer) -->
         <dependency>

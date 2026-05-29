@@ -31,6 +31,11 @@ spring:
     enabled: true
     table: flyway_schema_history_qa    # isolated — does not collide with acquiring-service
     locations: classpath:db/qa-migration
+    # LEARN: baseline-on-migrate — when the schema already has tables (from acquiring-service),
+    #        Flyway refuses to run without a history table. baseline-on-migrate tells Flyway
+    #        to treat the existing state as V0 and only run new migrations from here.
+    baseline-on-migrate: true
+    baseline-version: 0
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
