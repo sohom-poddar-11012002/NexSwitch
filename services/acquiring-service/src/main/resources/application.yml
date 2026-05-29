@@ -169,8 +169,9 @@ management:
     health:
       show-details: always
       show-components: always
+      validate-group-membership: false
       group:
         liveness:
           include: livenessState
         readiness:
-          include: readinessState,db,redis,hsmHealthIndicator,kafkaCustomHealthIndicator,networkSwitchHealthIndicator,redisCustomHealthIndicator
+          include: readinessState,db,redis
