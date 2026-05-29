@@ -27,7 +27,7 @@ export default async function ScenariosPage() {
         badge={scenarios.length > 0 ? `${scenarios.length} loaded` : undefined}
       />
 
-      {error && <ErrorBanner message="qa-orchestrator is not reachable on :8700" />}
+      {error && <ErrorBanner message={error} />}
 
       {scenarios.length === 0 && !error && (
         <EmptyState message="No scenarios found. Add YAML files under resources/scenarios/." />
