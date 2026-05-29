@@ -34,7 +34,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
 
-        // Permit actuator health and info without API key (used by K8s probes)
+        // Permit actuator health and info without API key (used by K8s probes and nginx)
         if (path.startsWith("/actuator/health") || path.startsWith("/actuator/info")) {
             filterChain.doFilter(request, response);
             return;
