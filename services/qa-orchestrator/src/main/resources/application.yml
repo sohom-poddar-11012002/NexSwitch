@@ -22,7 +22,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none   # Flyway owns schema creation; no validate to avoid ordering races
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
