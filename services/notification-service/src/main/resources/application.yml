@@ -30,7 +30,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none   # acquiring-service owns Flyway; notification-service starts before schema exists
     open-in-view: false
 
   flyway:

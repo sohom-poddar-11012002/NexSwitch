@@ -39,10 +39,11 @@ interface RawScenario {
 
 // ─── page ─────────────────────────────────────────────────────────────────────
 
-export default async function ScenarioDetailPage({ params }: { params: { id: string } }) {
+export default async function ScenarioDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let yaml: string;
   try {
-    yaml = await fetchScenarioYaml(params.id);
+    yaml = await fetchScenarioYaml(id);
   } catch {
     notFound();
   }
@@ -69,7 +70,7 @@ export default async function ScenarioDetailPage({ params }: { params: { id: str
       <div className="mb-8">
         <div className="flex items-start gap-3 mb-2">
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">
-            {s?.name ?? params.id}
+            {s?.name ?? id}
           </h1>
           {s?.channel && (
             <span className={`mt-1 shrink-0 text-[11px] px-2 py-0.5 rounded border font-mono ${channelColors[s.channel.toUpperCase()] ?? ""}`}>
@@ -129,7 +130,7 @@ export default async function ScenarioDetailPage({ params }: { params: { id: str
         <h2 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-widest mb-3">Raw YAML</h2>
         <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-2)]">
-            <span className="text-[11px] text-[var(--muted)] font-mono">{params.id}.yml</span>
+            <span className="text-[11px] text-[var(--muted)] font-mono">{id}.yml</span>
             <span className="text-[11px] text-[var(--muted)]">{yaml.split("\n").length} lines</span>
           </div>
           <pre className="p-5 text-xs font-mono text-[var(--text)] overflow-x-auto leading-relaxed whitespace-pre">

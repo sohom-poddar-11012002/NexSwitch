@@ -42,6 +42,32 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+
+        <!-- JPA — @EntityScan and @EnableJpaRepositories declared on AdapterConfig so all
+             services that scan com.nexswitch.app get entity/repo discovery automatically. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Flyway auto-configuration — ensures Flyway runs before Hibernate validates;
+             services with flyway.enabled=false skip migration; acquiring-service runs it. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+
+        <!-- Jackson 2.x — adapters module uses com.fasterxml.jackson.databind.ObjectMapper;
+             Spring Boot 4.0 only auto-configures tools.jackson (3.x), so we register a
+             Jackson 2.x ObjectMapper bean explicitly in AdapterConfig. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
@@ -59,7 +85,11 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
-        <!-- Kafka — NewTopic, TopicBuilder, KafkaAdmin (KafkaConfig) -->
+        <!-- Kafka — NewTopic, TopicBuilder, KafkaAdmin (KafkaConfig) + KafkaTemplate auto-config -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-kafka</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>

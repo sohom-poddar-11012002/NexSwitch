@@ -1,6 +1,6 @@
 FROM eclipse-temurin:26-jdk AS builder
 
-ARG MAVEN_VERSION=3.9.15
+ARG MAVEN_VERSION=3.9.16
 RUN apt-get update -q && \
     apt-get install -yq --no-install-recommends curl && \
     curl -fsSL "https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
