@@ -150,6 +150,10 @@ services:
       - "8090:8090"   # REST (main server port)
       - "8091:8091"   # Management / actuator
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -182,6 +186,10 @@ services:
     expose:
       - "8080"        # REST — internal only; nginx routes /api/v1/payments to this port
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -215,6 +223,10 @@ services:
       dockerfile: services/payment-switch/Dockerfile
     ports: ["8100:8100"]
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -238,6 +250,10 @@ services:
     expose:
       - "8085"        # REST — internal only; nginx routes /api/v1/webhooks to this port
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -254,6 +270,10 @@ services:
       dockerfile: services/merchant-simulator/Dockerfile
     ports: ["9000:9000"]
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -274,6 +294,10 @@ services:
       dockerfile: services/settlement-service/Dockerfile
     ports: ["8300:8300"]
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -291,6 +315,10 @@ services:
       dockerfile: services/reconciliation-service/Dockerfile
     ports: ["8400:8400"]
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -308,6 +336,10 @@ services:
       dockerfile: services/notification-service/Dockerfile
     ports: ["8500:8500"]
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -334,6 +366,10 @@ services:
       dockerfile: services/chargeback-service/Dockerfile
     ports: ["8600:8600"]
     networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -376,6 +412,10 @@ services:
       dockerfile: services/qa-orchestrator/Dockerfile
     # no host port — only reachable from frontend-qa-portal via the internal network
     expose: ["8700"]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
