@@ -7,7 +7,7 @@
 CREATE TABLE network_success_rates (
     network          VARCHAR(20)    NOT NULL,
     issuer_bin_prefix VARCHAR(8)   NOT NULL,
-    mcc              CHAR(4),
+    mcc              VARCHAR(4),
     hour_of_day      SMALLINT       NOT NULL,
     day_of_week      SMALLINT       NOT NULL,
     attempt_count    INT            NOT NULL DEFAULT 0,

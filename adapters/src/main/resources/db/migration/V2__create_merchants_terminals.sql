@@ -3,7 +3,7 @@
 CREATE TABLE merchants (
     id                  VARCHAR(15)     PRIMARY KEY,
     name                VARCHAR(100)    NOT NULL,
-    mcc                 CHAR(4)         NOT NULL,
+    mcc                 VARCHAR(4)         NOT NULL,
     status              VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',
     webhook_url         VARCHAR(500),
     webhook_secret      VARCHAR(100),
@@ -32,6 +32,6 @@ CREATE TABLE bin_table (
     issuer_name         VARCHAR(100),
     card_type           VARCHAR(20),
     card_product        VARCHAR(50),
-    country_code        CHAR(2)         DEFAULT 'IN',
+    country_code        VARCHAR(2)         DEFAULT 'IN',
     updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );

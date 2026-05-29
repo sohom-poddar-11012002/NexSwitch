@@ -3,7 +3,7 @@ CREATE TABLE collect_requests (
     merchant_id   VARCHAR(16)    NOT NULL,
     payer_vpa     VARCHAR(100)   NOT NULL,
     amount        NUMERIC(19, 2) NOT NULL,
-    currency      CHAR(3)        NOT NULL DEFAULT 'INR',
+    currency      VARCHAR(3)        NOT NULL DEFAULT 'INR',
     order_id      VARCHAR(64)    NOT NULL,
     status        VARCHAR(16)    NOT NULL DEFAULT 'PENDING',
     npci_txn_id   VARCHAR(64),

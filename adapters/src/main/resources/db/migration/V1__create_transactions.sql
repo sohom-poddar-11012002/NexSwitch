@@ -10,14 +10,14 @@ CREATE TABLE transactions (
     terminal_id         VARCHAR(8)      NOT NULL,
     merchant_id         VARCHAR(15)     NOT NULL,
     pan_hash            VARCHAR(64)     NOT NULL,     -- SHA-256, NEVER store PAN
-    card_last4          CHAR(4),
+    card_last4          VARCHAR(4),
     network             VARCHAR(20),
     payment_method      VARCHAR(30)     NOT NULL,
     amount              NUMERIC(15,2)   NOT NULL,     -- NEVER float/double
-    currency            CHAR(3)         NOT NULL DEFAULT 'INR',
+    currency            VARCHAR(3)         NOT NULL DEFAULT 'INR',
     status              VARCHAR(30)     NOT NULL,
     authorization_code  VARCHAR(6),
-    response_code       CHAR(2),
+    response_code       VARCHAR(2),
     risk_score          VARCHAR(10),
     idempotency_key     VARCHAR(100)    UNIQUE NOT NULL,
     npci_txn_id         VARCHAR(50),
