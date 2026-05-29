@@ -30,7 +30,7 @@ spring:
   flyway:
     enabled: true
     table: flyway_schema_history_qa    # isolated — does not collide with acquiring-service
-    locations: classpath:db/migration
+    locations: classpath:db/qa-migration
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
