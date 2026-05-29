@@ -117,7 +117,7 @@ services:
     depends_on: [postgres]
 
   kafka-ui:
-    image: provectus/kafka-ui:v0.7.2
+    image: ghcr.io/kafbat/kafka-ui:v1.3.0
     ports: ["8082:8080"]
     environment:
       KAFKA_CLUSTERS_0_NAME: nexswitch-local
@@ -141,7 +141,20 @@ services:
       - "8090:8090"   # REST (main server port)
       - "8091:8091"   # Management / actuator
     environment:
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
+      DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-local_dev_password}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8091/actuator/health/readiness || exit 1"]
       interval: 30s
@@ -269,11 +282,24 @@ services:
       dockerfile: services/notification-service/Dockerfile
     ports: ["8500:8500"]
     environment:
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
+      DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-local_dev_password}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_MAIL_HOST: mailhog
       SPRING_MAIL_PORT: 1025
       SPRING_PROFILES_ACTIVE: local
-    depends_on: [kafka, mailhog]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
 
   chargeback-service:
     build:

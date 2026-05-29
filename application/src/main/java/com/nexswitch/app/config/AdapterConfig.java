@@ -1,5 +1,9 @@
 package com.nexswitch.app.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nexswitch.domain.port.inbound.ProcessRefundUseCase;
 import com.nexswitch.domain.port.inbound.ReconcileUseCase;
 import com.nexswitch.domain.port.outbound.*;
@@ -14,15 +18,23 @@ import com.nexswitch.domain.service.ReconciliationService;
 import com.nexswitch.domain.service.ReversalService;
 import com.nexswitch.domain.service.TransactionStateMachine;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 // LEARN: @ConditionalOnProperty is the Spring idiom for the Strategy pattern — swap implementations
 //        (mock HSM locally, SoftHSM in staging, real HSM in prod) via a single config property
 //        without touching domain code. The domain port interface stays identical across all envs.
+// LEARN: @EntityScan / @EnableJpaRepositories here rather than on each service's Application class:
+//        all services scan com.nexswitch.app, so this one annotation covers every service that
+//        uses the adapters module — eliminates per-service boilerplate and prevents drift.
 @Configuration
 @EnableScheduling
+@EntityScan(basePackages = "com.nexswitch.adapters.outbound.persistence.entity")
+@EnableJpaRepositories(basePackages = "com.nexswitch.adapters.outbound.persistence.jpa")
 public class AdapterConfig {
 
     // LEARN: Exposing Clock as a @Bean lets any service use it via constructor injection.
@@ -30,6 +42,24 @@ public class AdapterConfig {
     @Bean
     public Clock clock() {
         return Clock.systemUTC();
+    }
+
+    @Bean
+    public TransactionStateMachine transactionStateMachine() {
+        return new TransactionStateMachine();
+    }
+
+    // LEARN: @ConditionalOnMissingBean means this only fires when Spring Boot's web auto-config
+    //        hasn't already registered an ObjectMapper. Services with spring-boot-starter-web
+    //        get the auto-configured one; services without it get this fallback, so CachingBinLookupAdapter
+    //        always finds a bean regardless of which starters each service declares.
+    @Bean
+    @ConditionalOnMissingBean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     }
 
     // LEARN: CompositionRoot — AuthorizationService is a pure domain class (no @Service annotation)
@@ -49,7 +79,8 @@ public class AdapterConfig {
             AuditPort auditPort,
             AtcWatermarkPort atcWatermarkPort,
             FallbackCounterPort fallbackCounterPort,
-            Clock clock) {
+            Clock clock,
+            TransactionStateMachine transactionStateMachine) {
         return new AuthorizationService(
             binLookupPort,
             idempotencyPort,
@@ -59,7 +90,7 @@ public class AdapterConfig {
             fraudScoringPort,
             authorizationPort,
             transactionRepository,
-            new TransactionStateMachine(),
+            transactionStateMachine,
             clock,
             auditPort,
             atcWatermarkPort,
@@ -71,9 +102,10 @@ public class AdapterConfig {
     public ReversalService reversalService(
             TransactionRepository transactionRepository,
             AuthorizationPort authorizationPort,
-            AuditPort auditPort) {
+            AuditPort auditPort,
+            TransactionStateMachine transactionStateMachine) {
         return new ReversalService(transactionRepository, authorizationPort,
-                new TransactionStateMachine(), auditPort);
+                transactionStateMachine, auditPort);
     }
 
     @Bean
@@ -111,16 +143,18 @@ public class AdapterConfig {
     public ProcessRefundUseCase processRefundUseCase(
             TransactionRepository transactionRepository,
             RefundPort refundPort,
-            AuditPort auditPort) {
+            AuditPort auditPort,
+            TransactionStateMachine transactionStateMachine) {
         return new ProcessRefundService(transactionRepository, refundPort,
-                new TransactionStateMachine(), auditPort);
+                transactionStateMachine, auditPort);
     }
 
     @Bean
     public ReconcileUseCase reconcileUseCase(TransactionRepository transactionRepository,
                                               AuditPort auditPort,
+                                              TransactionStateMachine transactionStateMachine,
                                               org.springframework.beans.factory.ObjectProvider<EodFilePort> eodFilePortProvider) {
-        return new ReconciliationService(transactionRepository, new TransactionStateMachine(),
+        return new ReconciliationService(transactionRepository, transactionStateMachine,
                 auditPort, eodFilePortProvider.getIfAvailable());
     }
 }

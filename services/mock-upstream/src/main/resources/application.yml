@@ -23,7 +23,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none   # acquiring-service owns Flyway; mock-upstream starts before schema exists
     open-in-view: false
 
   flyway:

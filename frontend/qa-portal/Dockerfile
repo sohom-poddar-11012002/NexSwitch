@@ -7,12 +7,10 @@ COPY package.json package-lock.json ./
 RUN npm ci --prefer-offline
 
 FROM node:22-alpine AS builder
-ARG NEXT_PUBLIC_QA_API=http://localhost:8700
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_QA_API=${NEXT_PUBLIC_QA_API}
 RUN npm run build
 
 FROM node:22-alpine AS runtime
