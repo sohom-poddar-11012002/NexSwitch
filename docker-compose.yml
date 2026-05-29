@@ -421,9 +421,10 @@ services:
       DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      QA_ISO8583_HOST: acquiring-service
-      QA_ISO8583_PORT: 8000
+      ISO8583_SWITCH_HOST: acquiring-service
+      ISO8583_SWITCH_PORT: 8000
       QA_INTERNAL_API_KEY: ${QA_INTERNAL_API_KEY:-local-dev-qa-key}
+      QA_CHANNEL_PLAYWRIGHT_ENABLED: "true"
       SPRING_PROFILES_ACTIVE: local
     networks: [internal]
     depends_on:

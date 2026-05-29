@@ -1,6 +1,8 @@
 package com.nexswitch.adapters.outbound.persistence.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -34,6 +36,7 @@ public class AuditLogEntity {
     @Column(name = "new_state", length = 50)
     private String newState;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "event_data", nullable = false, columnDefinition = "jsonb")
     private String eventData;
 
