@@ -10,7 +10,7 @@ CREATE TABLE pan_atc_watermarks (
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
--- Partial index: only look up recent watermarks (updated in the last 30 days)
--- to keep the index small for high-frequency read path.
-CREATE INDEX idx_atc_updated ON pan_atc_watermarks(updated_at DESC)
-    WHERE updated_at > NOW() - INTERVAL '30 days';
+-- LEARN: Partial index predicates must be IMMUTABLE — NOW() is volatile (changes each call)
+--        so PostgreSQL rejects it. A plain index on updated_at still serves the query
+--        path; pruning old rows is done by the application, not the index definition.
+CREATE INDEX idx_atc_updated ON pan_atc_watermarks(updated_at DESC);
