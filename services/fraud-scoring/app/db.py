@@ -144,31 +144,44 @@ class FraudCaseDB:
         self,
         embedding: list[float],
         query_text: str,
+        network: str | None = None,
         candidate_limit: int = 20,
         final_limit: int = 5,
     ) -> list[dict]:
+        # LEARN: Pre-filtering — apply WHERE network = %s BEFORE the ANN index scan.
+        #        pgvector evaluates the predicate at index traversal time so only matching rows
+        #        are considered as neighbours. Post-filtering (ANN first, discard after) silently
+        #        degrades recall when > 20% of rows are filtered — pre-filter avoids that loss.
+        #        Rule: if a metadata filter removes > 20% of the table, always pre-filter.
+        #
         # LEARN: Hybrid search — BM25 (keyword) catches exact matches like "MCC 7995" or
         #        "VISA"; vector search catches semantic matches like "jewelry ≈ precious metals".
         #        Reciprocal Rank Fusion (RRF): score = Σ 1/(k + rank_i). k=60 prevents a
         #        rank-1 result from dominating; no manual weight tuning needed.
         vec = np.array(embedding, dtype=np.float32)
+
+        net_filter = "AND network = %s" if network else ""
+
         with self._conn.cursor(cursor_factory=RealDictCursor) as cur:
+            vector_params = ([network] if network else []) + [vec, candidate_limit]
             cur.execute(
-                """SELECT id, features_text, amount_inr, mcc, network, method, is_fraud, pattern
+                f"""SELECT id, features_text, amount_inr, mcc, network, method, is_fraud, pattern
                    FROM fraud_cases
+                   WHERE true {net_filter}
                    ORDER BY embedding <=> %s
                    LIMIT %s""",
-                (vec, candidate_limit),
+                vector_params,
             )
             vector_rows: list[dict] = [dict(r) for r in cur.fetchall()]
 
+            bm25_params = [query_text] + ([network] if network else []) + [query_text, candidate_limit]
             cur.execute(
-                """SELECT id, features_text, amount_inr, mcc, network, method, is_fraud, pattern
+                f"""SELECT id, features_text, amount_inr, mcc, network, method, is_fraud, pattern
                    FROM fraud_cases
-                   WHERE features_tsv @@ plainto_tsquery('english', %s)
+                   WHERE features_tsv @@ plainto_tsquery('english', %s) {net_filter}
                    ORDER BY ts_rank(features_tsv, plainto_tsquery('english', %s)) DESC
                    LIMIT %s""",
-                (query_text, query_text, candidate_limit),
+                bm25_params,
             )
             bm25_rows: list[dict] = [dict(r) for r in cur.fetchall()]
 
@@ -187,10 +200,12 @@ class FraudCaseDB:
             rows_by_id[rid] = row
 
         # Any id that only appeared in one list gets a half-penalty for the missing list.
+        vector_ids = {r["id"] for r in vector_rows}
+        bm25_ids = {r["id"] for r in bm25_rows}
         for rid in rows_by_id:
-            if rid not in {r["id"] for r in vector_rows}:
+            if rid not in vector_ids:
                 rrf_scores[rid] += 1.0 / (_RRF_K + penalty)
-            if rid not in {r["id"] for r in bm25_rows}:
+            if rid not in bm25_ids:
                 rrf_scores[rid] += 1.0 / (_RRF_K + penalty)
 
         sorted_ids = sorted(rrf_scores, key=lambda i: rrf_scores[i], reverse=True)
