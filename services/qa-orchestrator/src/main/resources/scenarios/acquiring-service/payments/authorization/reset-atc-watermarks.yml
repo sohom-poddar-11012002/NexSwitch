@@ -1,0 +1,26 @@
+scenario:
+  id: reset-atc-watermarks
+  name: "Reset ATC watermarks before EMV scenarios"
+  description: |
+    Clears pan_atc_watermarks so EMV scenarios with hardcoded ATCs can be re-run.
+    The test-admin endpoint is only available on the local profile.
+  platform: acquiring-service
+  project: payments
+  feature: authorization
+  channel: REST
+
+  variables:
+    rest_base_url: "http://acquiring-service:8080"
+
+  steps:
+    - type: send
+      channel: REST
+      operation: DELETE /api/internal/test-admin/atc-watermarks
+      payload: {}
+      timeout_ms: 5000
+      capture_response_as: reset_response
+
+    - type: assert
+      expression: "reset_response['status_code'] == '200'"
+      description: "ATC watermark reset must succeed"
+      fail_fast: true

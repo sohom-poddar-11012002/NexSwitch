@@ -80,8 +80,8 @@ public class UpiCreditController {
                 .withStatus(QRSession.Status.COMPLETED)
                 .withNpciTxnId(new NpciTxnId(req.npciTxnId()));
         qrSessionPort.update(completed);
-        // Session auto-deletes via Redis TTL; explicit delete cleans it up immediately
-        qrSessionPort.delete(req.txnRef());
+        // LEARN: Session stays in Redis until TTL so merchants can poll status after credit.
+        //        Immediate delete would cause a 404 on the very next GET /qr/status call.
 
         log.info("upi.credit.completed txnRef={} npciTxnId={}", req.txnRef(), req.npciTxnId());
         return ResponseEntity.ok(new CreditAckResponse(req.txnRef(), "COMPLETED"));

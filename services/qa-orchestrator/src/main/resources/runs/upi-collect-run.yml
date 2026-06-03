@@ -10,6 +10,10 @@ run:
   session:
     mode: STATELESS
 
+  variables:
+    rest_base_url: "http://acquiring-service:8080"
+    rest_api_key: "dev-api-key-change-me"
+
   scenarios:
     - id: static-qr-generate
     - id: upi-collect-initiate

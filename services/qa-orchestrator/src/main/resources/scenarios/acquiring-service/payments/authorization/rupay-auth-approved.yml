@@ -8,7 +8,7 @@ scenario:
   channel: ISO8583
 
   variables:
-    pan: "6074829000000003"
+    pan: "6074829000000000"
     amount_paise: "000000050000"
     terminal_id: "TERM0042"
     merchant_id: "MERCH0000999"

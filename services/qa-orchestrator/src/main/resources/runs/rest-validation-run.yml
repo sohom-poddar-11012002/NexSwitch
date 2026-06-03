@@ -6,6 +6,10 @@ run:
     mode: STATELESS
     isolate_on_failure: true
 
+  variables:
+    rest_base_url: "http://acquiring-service:8080"
+    rest_api_key: "dev-api-key-change-me"
+
   scenarios:
     - id: validation-missing-field
     - id: validation-bad-format

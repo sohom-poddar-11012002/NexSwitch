@@ -8,6 +8,7 @@ import com.nexswitch.qa.domain.model.TestStep;
 import com.nexswitch.qa.domain.port.outbound.TestChannelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -47,18 +48,37 @@ public class RestTestAdapter implements TestChannelPort {
         String baseUrl = resolveBaseUrl(context, step.channel());
         String url     = baseUrl + path;
 
+        String apiKey = resolveApiKey(context);
+
+        // LEARN: onStatus with empty handler suppresses RestClient's default behaviour of throwing
+        //        HttpClientErrorException on 4xx/5xx. QA scenarios intentionally test error paths
+        //        (e.g. assert status_code == '400') so we want to capture the error response, not throw.
         ResponseEntity<String> response = switch (method.toUpperCase()) {
-            case "GET"    -> restClient.get().uri(url).retrieve().toEntity(String.class);
-            case "DELETE" -> restClient.delete().uri(url).retrieve().toEntity(String.class);
+            case "GET"    -> restClient.get().uri(url)
+                                .header("X-API-Key", apiKey)
+                                .retrieve()
+                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
+                                .toEntity(String.class);
+            case "DELETE" -> restClient.delete().uri(url)
+                                .header("X-API-Key", apiKey)
+                                .retrieve()
+                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
+                                .toEntity(String.class);
             case "POST"   -> restClient.post().uri(url)
-                                .body(step.payload())
-                                .retrieve().toEntity(String.class);
+                                .header("X-API-Key", apiKey)
+                                .body(step.payload()).retrieve()
+                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
+                                .toEntity(String.class);
             case "PUT"    -> restClient.put().uri(url)
-                                .body(step.payload())
-                                .retrieve().toEntity(String.class);
+                                .header("X-API-Key", apiKey)
+                                .body(step.payload()).retrieve()
+                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
+                                .toEntity(String.class);
             case "PATCH"  -> restClient.patch().uri(url)
-                                .body(step.payload())
-                                .retrieve().toEntity(String.class);
+                                .header("X-API-Key", apiKey)
+                                .body(step.payload()).retrieve()
+                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
+                                .toEntity(String.class);
             default -> throw new IllegalArgumentException("Unsupported HTTP method: " + method);
         };
 
@@ -94,9 +114,13 @@ public class RestTestAdapter implements TestChannelPort {
     }
 
     private String resolveBaseUrl(Map<String, Object> context, ChannelType channel) {
-        // env_profile overrides (injected via context by TriggerRunUseCase)
         Object override = context.get("rest_base_url");
         if (override != null) return override.toString().stripTrailing().replaceAll("/$", "");
         return "";
+    }
+
+    private String resolveApiKey(Map<String, Object> context) {
+        Object key = context.get("rest_api_key");
+        return key != null ? key.toString() : "";
     }
 }
