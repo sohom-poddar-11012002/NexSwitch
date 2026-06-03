@@ -1,7 +1,7 @@
 scenario:
   id: full-lifecycle
   name: "Full lifecycle — auth approved then Kafka event fired"
-  description: "Visa auth → assert field39=00 → assert AUTHORIZATION_APPROVED event on Kafka within 5s."
+  description: "Visa auth → assert field39=00 → assert transaction.authorized Kafka event fired within 5s."
   platform: acquiring-service
   project: payments
   feature: authorization
@@ -43,8 +43,8 @@ scenario:
       channel: KAFKA_ASSERT
       operation: assert_kafka_event
       payload:
-        topic: authorization-events
-        jsonpath: "$.eventType"
-        expected_value: AUTHORIZATION_APPROVED
+        topic: transaction.authorized
+        jsonpath: "$.network"
+        expected_value: VISA
       timeout_ms: 5000
       capture_response_as: kafka_event
