@@ -153,8 +153,11 @@ public class AdapterConfig {
     public ReconcileUseCase reconcileUseCase(TransactionRepository transactionRepository,
                                               AuditPort auditPort,
                                               TransactionStateMachine transactionStateMachine,
-                                              org.springframework.beans.factory.ObjectProvider<EodFilePort> eodFilePortProvider) {
+                                              org.springframework.beans.factory.ObjectProvider<EodFilePort> eodFilePortProvider,
+                                              org.springframework.beans.factory.ObjectProvider<ReconciliationExceptionPort> exceptionPortProvider,
+                                              org.springframework.beans.factory.ObjectProvider<ReconciliationRunPort> runPortProvider) {
         return new ReconciliationService(transactionRepository, transactionStateMachine,
-                auditPort, eodFilePortProvider.getIfAvailable());
+                auditPort, eodFilePortProvider.getIfAvailable(),
+                exceptionPortProvider.getIfAvailable(), runPortProvider.getIfAvailable());
     }
 }
