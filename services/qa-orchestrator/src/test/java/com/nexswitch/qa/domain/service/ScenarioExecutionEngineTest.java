@@ -158,7 +158,7 @@ class ScenarioExecutionEngineTest {
     }
 
     @Test
-    void wait_for_human_times_out_and_fails() {
+    void wait_for_human_times_out_and_auto_passes() {
         UUID executionId = UUID.randomUUID();
         TestScenario scenario = scenario(List.of(
                 new TestStep.WaitForHuman("verify-receipt", "Check receipt", Duration.ofMillis(100))
@@ -166,8 +166,11 @@ class ScenarioExecutionEngineTest {
 
         RunExecution.ScenarioExecution result = engine.executeScenario(scenario, new HashMap<>(), executionId);
 
-        assertThat(result.status()).isEqualTo(ExecutionStatus.FAILED);
-        assertThat(result.stepExecutions().get(0).result()).isInstanceOf(StepResult.TimedOut.class);
+        // WaitForHuman is advisory — no reviewer in an automated run auto-passes so the suite continues.
+        assertThat(result.status()).isEqualTo(ExecutionStatus.PASSED);
+        StepResult stepResult = result.stepExecutions().get(0).result();
+        assertThat(stepResult).isInstanceOf(StepResult.Passed.class);
+        assertThat(((StepResult.Passed) stepResult).captured()).containsEntry("auto_passed", "human_timeout");
     }
 
     private TestScenario scenario(List<TestStep> steps) {
