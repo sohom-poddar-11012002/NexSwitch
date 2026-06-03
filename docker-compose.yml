@@ -424,8 +424,11 @@ services:
     environment:
       DB_URL: postgresql://nexswitch_app:${DB_PASSWORD:-local_dev_password}@postgres:5432/nexswitch
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-local_dev_password}@redis:6379/0
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8090/health || exit 1"]

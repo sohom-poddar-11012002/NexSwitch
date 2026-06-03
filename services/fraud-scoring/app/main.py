@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from anthropic import Anthropic
 from fastapi import FastAPI
 
+from .cache import SemanticCache
 from .db import FraudCaseDB
 from .embeddings import embed
 from .graph import FraudState, build_graph
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
         "postgresql://nexswitch_app:local_dev_password@postgres:5432/nexswitch",
     )
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    redis_url = os.environ.get("REDIS_URL", "")
     if not api_key:
         log.warning("fraud.ANTHROPIC_API_KEY not set — LLM scoring disabled, returning default 0.10")
 
@@ -33,7 +35,19 @@ async def lifespan(app: FastAPI):
     client = Anthropic(api_key=api_key or "placeholder")
     client.api_key = api_key  # empty string → score node falls back to default
 
-    _state["graph"] = build_graph(db, embed, client)
+    cache: SemanticCache | None = None
+    if redis_url:
+        try:
+            cache = SemanticCache(redis_url)
+            cache._r.ping()
+            log.info("fraud.semantic_cache enabled redis_url=%s", redis_url)
+        except Exception as exc:
+            log.warning("fraud.semantic_cache_unavailable err=%s — caching disabled", exc)
+            cache = None
+    else:
+        log.info("fraud.semantic_cache disabled — REDIS_URL not set")
+
+    _state["graph"] = build_graph(db, embed, client, cache)
     log.info("fraud_scoring_service.ready")
     yield
     db.close()

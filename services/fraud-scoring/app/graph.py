@@ -1,20 +1,22 @@
 import json
 import logging
 import os
-from typing import Callable
+from typing import Callable, Optional
 
 from anthropic import Anthropic
 from langgraph.graph import END, StateGraph
 from sentence_transformers import CrossEncoder
 from typing_extensions import NotRequired, TypedDict
 
+from .cache import SemanticCache
+
 log = logging.getLogger(__name__)
 
 # LEARN: LangGraph StateGraph — each node is a pure function (state_in → partial_state_out).
 #        The framework merges returned dicts into the shared state between nodes.
-#        This graph: describe → hypothesize → retrieve → rerank → score.
-#        hypothesize (HyDE + multi-query) lives between describe and retrieve so that retrieve
-#        can use the document-space embedding instead of the query-space embedding.
+#        Graph: describe → hypothesize → retrieve → rerank → route → score.
+#        route (LLM routing) and hypothesize (HyDE) keep the graph topology linear —
+#        state flags (skip_llm, model_id) avoid conditional edges entirely.
 class FraudState(TypedDict):
     pan_hash: str
     amount_inr: float
@@ -32,6 +34,8 @@ class FraudState(TypedDict):
     # populated by retrieve / rerank
     embedding: list
     similar_cases: list
+    # populated by route
+    model_id: NotRequired[str]
     # populated by score
     score: float
     reasoning: str
@@ -60,7 +64,7 @@ def _get_reranker() -> CrossEncoder:
     return _RERANKER
 
 
-def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic):
+def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic, cache: Optional[SemanticCache] = None):
     # Pre-warm cross-encoder at startup so first request pays no model-load latency.
     reranker = _get_reranker()
 
@@ -165,6 +169,19 @@ def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic):
         ranked = sorted(zip(scores, cases), key=lambda x: x[0], reverse=True)
         return {"similar_cases": [c for _, c in ranked[:5]]}
 
+    def route(state: FraudState) -> dict:
+        # LEARN: LLM routing — use a cheap pre-signal (fraction of fraud neighbours) to pick
+        #        the model tier. Haiku handles the benign majority (~15× cheaper per token);
+        #        Sonnet handles high-risk bands where better chain-of-thought matters.
+        #        This is industry-standard: route by complexity, not by arbitrary heuristic.
+        cases = state["similar_cases"]
+        if not cases or state.get("skip_llm"):
+            return {"model_id": "claude-haiku-4-5-20251001"}
+        fraud_fraction = sum(1 for c in cases if c["is_fraud"]) / len(cases)
+        model = "claude-sonnet-4-6" if fraud_fraction >= 0.4 else "claude-haiku-4-5-20251001"
+        log.info("fraud.route fraud_fraction=%.2f model=%s", fraud_fraction, model)
+        return {"model_id": model}
+
     def score(state: FraudState) -> dict:
         # Adaptive skip — trivially benign transaction bypassed the full pipeline.
         if state.get("skip_llm"):
@@ -178,6 +195,13 @@ def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic):
             log.warning("fraud.llm_not_configured returning default_score=0.10")
             return {"score": 0.10, "reasoning": "llm_not_configured"}
 
+        embedding = state.get("embedding") or []
+        if cache and embedding:
+            hit = cache.lookup(embedding)
+            if hit:
+                return {"score": hit["score"], "reasoning": hit["reasoning"]}
+
+        model_id = state.get("model_id", "claude-haiku-4-5-20251001")
         cases_text = "\n".join(
             f"- INR {c['amount_inr']}, MCC {c['mcc']}, {c['network']} {c['method']}, "
             f"fraud={c['is_fraud']}, pattern={c['pattern']}"
@@ -194,15 +218,19 @@ def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic):
         )
 
         try:
+            log.info("fraud.llm_call model=%s", model_id)
             msg = client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=model_id,
                 max_tokens=100,
                 messages=[{"role": "user", "content": prompt}],
             )
             raw = msg.content[0].text.strip()
             result = json.loads(raw)
             s = max(0.0, min(1.0, float(result["score"])))
-            return {"score": s, "reasoning": result.get("reasoning", "")}
+            reasoning = result.get("reasoning", "")
+            if cache and embedding:
+                cache.store(embedding, s, reasoning)
+            return {"score": s, "reasoning": reasoning}
         except Exception as exc:
             log.warning("fraud.llm_score_failed err=%s", exc)
             return {"score": 0.10, "reasoning": "llm_error"}
@@ -212,11 +240,13 @@ def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic):
     g.add_node("hypothesize", hypothesize)
     g.add_node("retrieve", retrieve)
     g.add_node("rerank", rerank)
+    g.add_node("route", route)
     g.add_node("score", score)
     g.set_entry_point("describe")
     g.add_edge("describe", "hypothesize")
     g.add_edge("hypothesize", "retrieve")
     g.add_edge("retrieve", "rerank")
-    g.add_edge("rerank", "score")
+    g.add_edge("rerank", "route")
+    g.add_edge("route", "score")
     g.add_edge("score", END)
     return g.compile()
