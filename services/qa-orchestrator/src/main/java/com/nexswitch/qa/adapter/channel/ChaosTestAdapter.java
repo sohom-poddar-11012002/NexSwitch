@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -69,11 +70,13 @@ public class ChaosTestAdapter implements TestChannelPort {
                 String container = require(p, "container");
                 int exit = commandRunner.run("docker", "pause", container);
                 log.info("qa.chaos.docker_pause container={} exit={}", container, exit);
+                if (exit != 0) throw new IOException("docker pause failed exit=" + exit + " container=" + container);
             }
             case "docker_unpause" -> {
                 String container = require(p, "container");
                 int exit = commandRunner.run("docker", "unpause", container);
                 log.info("qa.chaos.docker_unpause container={} exit={}", container, exit);
+                if (exit != 0) throw new IOException("docker unpause failed exit=" + exit + " container=" + container);
             }
             case "sleep_ms" -> {
                 long durationMs = Long.parseLong(require(p, "duration_ms"));

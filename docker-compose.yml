@@ -460,6 +460,11 @@ services:
       QA_INTERNAL_API_KEY: ${QA_INTERNAL_API_KEY:-local-dev-qa-key}
       QA_CHANNEL_PLAYWRIGHT_ENABLED: "true"
       SPRING_PROFILES_ACTIVE: local
+    # Mount Docker socket so ChaosTestAdapter can pause/unpause sibling containers.
+    # Mac/Windows Docker Desktop: socket is world-accessible (no group_add needed).
+    # Linux: add group_add: ["999"] if the payments user can't access the socket.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks: [internal]
     depends_on:
       postgres:
