@@ -6,15 +6,15 @@ from typing import Callable
 from anthropic import Anthropic
 from langgraph.graph import END, StateGraph
 from sentence_transformers import CrossEncoder
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 log = logging.getLogger(__name__)
 
 # LEARN: LangGraph StateGraph — each node is a pure function (state_in → partial_state_out).
 #        The framework merges returned dicts into the shared state between nodes.
-#        This graph: describe → retrieve → rerank → score.
-#        The rerank node sits between ANN retrieval and LLM scoring; it narrows 20 candidates
-#        to 5 using a cross-encoder, keeping the LLM context window lean and precise.
+#        This graph: describe → hypothesize → retrieve → rerank → score.
+#        hypothesize (HyDE + multi-query) lives between describe and retrieve so that retrieve
+#        can use the document-space embedding instead of the query-space embedding.
 class FraudState(TypedDict):
     pan_hash: str
     amount_inr: float
@@ -22,16 +22,29 @@ class FraudState(TypedDict):
     network: str
     method: str
     hour_of_day: int
-    # populated by nodes
+    # populated by describe
     features_text: str
+    # populated by hypothesize
+    hypothesis_text: NotRequired[str]
+    hypothesis_embedding: NotRequired[list]
+    query_variants: NotRequired[list[str]]
+    skip_llm: NotRequired[bool]
+    # populated by retrieve / rerank
     embedding: list
     similar_cases: list
+    # populated by score
     score: float
     reasoning: str
 
 
 _RERANKER: CrossEncoder | None = None
 _MODELS_DIR = os.environ.get("SENTENCE_TRANSFORMERS_HOME", "/app/models")
+
+# Amount threshold below which we skip the full RAG+LLM pipeline.
+# LEARN: Adaptive retrieval — a trivially low-risk transaction (INR < 50, ~$0.60) doesn't
+#        need Claude. Routing it to a default score saves ~200ms latency and ~$0.001 per call.
+#        In production this threshold is a feature-flag; here it's a constant.
+_ADAPTIVE_SKIP_AMOUNT_INR = 50.0
 
 
 def _get_reranker() -> CrossEncoder:
@@ -58,28 +71,105 @@ def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic):
         )
         return {"features_text": text}
 
-    def retrieve(state: FraudState) -> dict:
-        # LEARN: Hybrid search — BM25 catches exact token matches ("MCC 7995", "VISA");
-        #        vector search catches semantic matches ("jewelry ≈ precious metals at midnight").
-        #        RRF merges both ranked lists without needing hand-tuned weights.
-        #        Retrieves top-20 candidates for the rerank node to narrow to 5.
-        embedding = embed_fn(state["features_text"])
-        cases = db.find_similar_hybrid(
-            embedding, state["features_text"], candidate_limit=20, final_limit=20
+    def hypothesize(state: FraudState) -> dict:
+        # LEARN: Adaptive retrieval — skip the expensive RAG+LLM pipeline for trivially benign
+        #        amounts. The skip_llm flag is checked by retrieve and score nodes so the graph
+        #        still terminates cleanly without conditional edges.
+        if state["amount_inr"] < _ADAPTIVE_SKIP_AMOUNT_INR:
+            log.info("fraud.adaptive_skip amount_inr=%.2f", state["amount_inr"])
+            return {"skip_llm": True, "hypothesis_text": "", "hypothesis_embedding": [], "query_variants": []}
+
+        if not client.api_key:
+            emb = embed_fn(state["features_text"])
+            return {
+                "skip_llm": False,
+                "hypothesis_text": state["features_text"],
+                "hypothesis_embedding": emb,
+                "query_variants": [],
+            }
+
+        # LEARN: HyDE (Hypothetical Document Embeddings) — the user query ("INR 6000 at 2AM,
+        #        MCC 5411") lives in the *query space*; stored fraud cases live in the *document
+        #        space*. The gap between query and document embedding distributions reduces ANN
+        #        recall. Generating a hypothetical matching case and embedding *that* produces a
+        #        vector in the document space — much closer to actual fraud cases in the index.
+        #        Cost: one Haiku call (~$0.0001) for typically +15–25% recall@5 improvement.
+        #
+        # LEARN: Multi-query retrieval — a single query phrasing may miss semantically relevant
+        #        docs. Generating 2 variants and unioning retrieval results covers more angles
+        #        without duplicating documents (dedup by ID in retrieve node).
+        prompt = (
+            "You are a fraud analyst for an Indian payment switch.\n"
+            f"Transaction: {state['features_text']}\n\n"
+            "1. Write ONE sentence describing what a matching historical fraud case in our "
+            "database would look like.\n"
+            "2. Provide 2 alternative phrasings of the original transaction for retrieval diversity.\n"
+            "Return ONLY valid JSON (no markdown):\n"
+            '{"hypothesis": "...", "variants": ["...", "..."]}'
         )
-        return {"embedding": embedding, "similar_cases": cases}
+        try:
+            msg = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=150,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            result = json.loads(msg.content[0].text.strip())
+            hypothesis = result.get("hypothesis", state["features_text"])
+            variants = result.get("variants", [])[:2]
+            log.info("fraud.hypothesize hypothesis=%s variants=%d", hypothesis[:60], len(variants))
+            return {
+                "skip_llm": False,
+                "hypothesis_text": hypothesis,
+                "hypothesis_embedding": embed_fn(hypothesis),
+                "query_variants": variants,
+            }
+        except Exception as exc:
+            log.warning("fraud.hypothesize_failed err=%s — falling back to features_text", exc)
+            return {
+                "skip_llm": False,
+                "hypothesis_text": state["features_text"],
+                "hypothesis_embedding": embed_fn(state["features_text"]),
+                "query_variants": [],
+            }
+
+    def retrieve(state: FraudState) -> dict:
+        if state.get("skip_llm"):
+            return {"embedding": [], "similar_cases": []}
+
+        # Use HyDE hypothesis embedding for primary search (document-space vector).
+        primary_emb = state.get("hypothesis_embedding") or embed_fn(state["features_text"])
+        primary_text = state.get("hypothesis_text") or state["features_text"]
+        network = state.get("network")
+
+        # LEARN: Multi-query retrieval — retrieve for the hypothesis + each variant, then union
+        #        results by ID. Each phrasing variant probes a different neighbourhood in the
+        #        embedding space; the union surface area is larger than any single query alone.
+        all_cases: dict[int, dict] = {}
+        for emb, text in [(primary_emb, primary_text)] + [
+            (embed_fn(v), v) for v in (state.get("query_variants") or [])
+        ]:
+            limit = 20 if emb is primary_emb else 10
+            for c in db.find_similar_hybrid(emb, text, network=network, candidate_limit=limit, final_limit=limit):
+                all_cases[c["id"]] = c
+
+        log.info("fraud.retrieve total_unique_candidates=%d", len(all_cases))
+        return {"embedding": primary_emb, "similar_cases": list(all_cases.values())}
 
     def rerank(state: FraudState) -> dict:
         cases = state["similar_cases"]
         if not cases:
             return {}
-        query = state["features_text"]
+        query = state.get("hypothesis_text") or state["features_text"]
         pairs = [(query, c["features_text"]) for c in cases]
         scores = reranker.predict(pairs)
         ranked = sorted(zip(scores, cases), key=lambda x: x[0], reverse=True)
         return {"similar_cases": [c for _, c in ranked[:5]]}
 
     def score(state: FraudState) -> dict:
+        # Adaptive skip — trivially benign transaction bypassed the full pipeline.
+        if state.get("skip_llm"):
+            return {"score": 0.03, "reasoning": "adaptive_skip_low_amount"}
+
         # LEARN: RAG (Retrieval-Augmented Generation) — retrieved + reranked cases act as
         #        dynamic few-shot examples. The LLM doesn't need fine-tuning; updated seed data
         #        changes behaviour immediately. This is why RAG beats static prompts for fraud:
@@ -119,11 +209,13 @@ def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic):
 
     g = StateGraph(FraudState)
     g.add_node("describe", describe)
+    g.add_node("hypothesize", hypothesize)
     g.add_node("retrieve", retrieve)
     g.add_node("rerank", rerank)
     g.add_node("score", score)
     g.set_entry_point("describe")
-    g.add_edge("describe", "retrieve")
+    g.add_edge("describe", "hypothesize")
+    g.add_edge("hypothesize", "retrieve")
     g.add_edge("retrieve", "rerank")
     g.add_edge("rerank", "score")
     g.add_edge("score", END)
