@@ -26,7 +26,10 @@ services:
   # ─── Infrastructure ──────────────────────────────────────────────────────────
 
   postgres:
-    image: postgres:18-alpine
+    # pgvector/pgvector:pg17 has the vector extension pre-installed.
+    # NOTE: switching from postgres:18-alpine requires recreating the volume once:
+    #   docker-compose down -v && docker-compose up -d
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_DB: nexswitch
       POSTGRES_USER: nexswitch_app
@@ -201,6 +204,8 @@ services:
       HSM_PROVIDER: ${HSM_PROVIDER:-mock}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
       SPRING_PROFILES_ACTIVE: local
+      FRAUD_SCORING_ENABLED: "true"
+      FRAUD_SCORING_URL: "http://fraud-scoring:8090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -209,6 +214,8 @@ services:
       kafka:
         condition: service_healthy
       mock-upstream:
+        condition: service_healthy
+      fraud-scoring:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health/readiness || exit 1"]
@@ -399,6 +406,33 @@ services:
     ports: ["3002:80"]
     networks: [internal]
     depends_on: [acquiring-service, settlement-service, reconciliation-service]
+
+  # ─── AI / ML Services ────────────────────────────────────────────────────────
+
+  fraud-scoring:
+    build:
+      context: services/fraud-scoring
+      dockerfile: Dockerfile
+    expose: ["8090"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          # LEARN: sentence-transformers + torch-cpu needs ~700MB RAM at inference.
+          #        1.5g is the safe ceiling for the Python process including torch overhead.
+          memory: 1536m
+    environment:
+      DB_URL: postgresql://nexswitch_app:${DB_PASSWORD:-local_dev_password}@postgres:5432/nexswitch
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8090/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
 
   # ─── QA Platform — DEV / STAGING ONLY, NEVER PRODUCTION ─────────────────────
   # qa-orchestrator fires real ISO 8583 authorization requests, has chaos injection

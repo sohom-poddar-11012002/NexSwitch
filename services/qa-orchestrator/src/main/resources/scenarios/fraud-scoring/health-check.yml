@@ -1,0 +1,26 @@
+scenario:
+  id: fraud-scoring-health
+  name: "Fraud scoring service health endpoint"
+  description: |
+    GET /health on fraud-scoring service.
+    Verifies the LangGraph service started, embedded the model, and connected to pgvector.
+  platform: fraud-scoring
+  project: health
+  feature: availability
+  channel: REST
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "GET /health"
+      timeout_ms: 5000
+      capture_response_as: health_response
+
+    - type: assert
+      expression: "health_response['status_code'] == '200'"
+      description: "fraud-scoring /health must return 200"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('ok')"
+      description: "response body must contain status ok"

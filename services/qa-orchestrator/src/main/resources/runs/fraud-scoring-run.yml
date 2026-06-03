@@ -1,0 +1,16 @@
+run:
+  id: fraud-scoring-run
+  name: "LangGraph fraud scoring — pgvector RAG + Claude Haiku"
+
+  session:
+    mode: STATELESS
+    isolate_on_failure: false
+
+  variables:
+    rest_base_url: "http://fraud-scoring:8090"
+    rest_api_key: ""
+
+  scenarios:
+    - id: fraud-scoring-health
+    - id: fraud-scoring-low-risk
+    - id: fraud-scoring-high-risk

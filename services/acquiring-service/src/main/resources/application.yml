@@ -102,6 +102,11 @@ storage:
 security:
   api-key: ${API_KEY:dev-api-key-change-me}
 
+fraud:
+  scoring:
+    enabled: ${FRAUD_SCORING_ENABLED:false}
+    url: ${FRAUD_SCORING_URL:http://fraud-scoring:8090}
+
 qr:
   session:
     ttl-minutes: 5
