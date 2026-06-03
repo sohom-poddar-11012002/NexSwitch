@@ -1,0 +1,17 @@
+run:
+  id: reconciliation-eod-run
+  name: "Reconciliation EOD — three-way diff (switch vs network file)"
+  description: |
+    Triggers the reconciliation job via REST and asserts the response contains
+    the expected fields. Validates the EOD diff engine is wired correctly.
+    mismatchCount = 0 for a clean run (no SETTLEMENT_PENDING txns in CI).
+
+  session:
+    mode: STATELESS
+
+  variables:
+    rest_base_url: "http://acquiring-service:8080"
+    rest_api_key: "dev-api-key-change-me"
+
+  scenarios:
+    - id: reconciliation-run

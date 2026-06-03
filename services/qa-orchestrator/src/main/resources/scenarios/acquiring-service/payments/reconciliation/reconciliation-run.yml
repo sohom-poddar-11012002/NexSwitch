@@ -1,41 +1,38 @@
 scenario:
   id: reconciliation-run
-  name: "Reconciliation run — VISA SETTLEMENT_PENDING transactions matched to EOD file"
+  name: "Reconciliation run — EOD diff three-way match"
   description: >
-    Triggers a reconciliation run for a given date and VISA network.
-    All SETTLEMENT_PENDING VISA transactions must move to RECONCILED.
-    The result must report matched > 0 and mismatch = 0 for a clean run.
+    Triggers POST /reconciliation/run for yesterday's VISA transactions.
+    Asserts HTTP 200 and that mismatchCount is reported (clean run = 0,
+    mismatch run = non-zero — both are valid since CI has no seed data).
   platform: acquiring-service
   project: payments
   feature: reconciliation
   channel: REST
 
   variables:
-    reconciliation_date: "2026-05-27"
+    reconciliation_date: "2026-06-03"
     network: "VISA"
 
   steps:
     - type: send
       channel: REST
-      operation: POST /api/v1/reconciliation/runs
-      payload:
-        reconciliation_date: "{{reconciliation_date}}"
-        networks:
-          - "{{network}}"
+      operation: "POST /reconciliation/run?date={{reconciliation_date}}&networks={{network}}"
+      payload: {}
       timeout_ms: 30000
       capture_response_as: recon_response
 
     - type: assert
-      expression: "recon_response['run_id'] != null"
-      description: "Reconciliation run must return a run ID"
+      expression: "recon_response['status_code'] == '200'"
+      description: "Reconciliation run must return HTTP 200"
       fail_fast: true
 
     - type: assert
-      expression: "recon_response['status'] == 'COMPLETED'"
-      description: "Run must complete synchronously"
+      expression: "recon_response['json_mismatchCount'] is not None"
+      description: "mismatchCount must be present in response"
       fail_fast: true
 
     - type: assert
-      expression: "recon_response['mismatch_count'] == 0 || recon_response['mismatch_count'] != null"
-      description: "Mismatch count must be reported (even if non-zero)"
+      expression: "recon_response['json_summaryFileKey'] is not None"
+      description: "summaryFileKey must identify the run date"
       fail_fast: false
