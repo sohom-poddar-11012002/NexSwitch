@@ -1229,19 +1229,21 @@ Oct 1 → Dec 31     (13 weeks)  POLISH + APPLY PHASE
 - [ ] pgvector 0.7+: native `halfvec` (16-bit float) and `bit` (binary) column + index types
 - [ ] Trade-off: always benchmark recall@K before and after quantization; int8 is usually safe; binary needs reranking
 
-### Semantic Caching — P2 🔥
-- [ ] Cache LLM responses by *embedding similarity*, not exact prompt match
-  - Store `(embedding, response)` pairs in Redis; on new query: embed → cosine similarity search → if > 0.95 → return cached
+### Semantic Caching — P2 🔥 ✅ implemented PR #181
+- [x] Cache LLM responses by *embedding similarity*, not exact prompt match
+  - Store `(embedding, response)` pairs in Redis; on new query: embed → cosine similarity search → if > 0.97 → return cached
   - Why: identical fraud patterns phrased differently map to near-identical embeddings → same cached answer
-  - GPTCache / semantic-cache libraries; or DIY with pgvector + Redis for the hot path
-- [ ] Eviction: TTL + LRU; stale fraud patterns should expire (fraud patterns change weekly)
+  - Implemented: `cache.py` — `SemanticCache` backed by Redis sorted set (recency index) + hashes
+- [x] Eviction: TTL + LRU; stale fraud patterns should expire (fraud patterns change weekly)
+  - Implemented: EXPIRE(3600) per entry + ZREMRANGEBYSCORE to prune sorted-set index
 - [ ] Cost impact: 40–70% LLM call reduction on repetitive query workloads
 
-### LLM Routing — P2 🔥
-- [ ] Route queries to cheapest model that can answer them accurately
-  - `rule_score < 0.05` → skip LLM entirely (clearly benign)
-  - `0.05 ≤ rule_score < 0.6` → Claude Haiku (fast, cheap)
-  - `rule_score ≥ 0.6` → Claude Sonnet (more reasoning capacity for ambiguous high-risk)
+### LLM Routing — P2 🔥 ✅ implemented PR #181
+- [x] Route queries to cheapest model that can answer them accurately
+  - `amount_inr < 50` → skip LLM entirely (clearly benign — adaptive routing from PR #180)
+  - `fraud_fraction < 0.4` (from reranked neighbours) → Claude Haiku (fast, cheap)
+  - `fraud_fraction ≥ 0.4` → Claude Sonnet (more reasoning capacity for ambiguous high-risk)
+  - Implemented: `route` node between `rerank` and `score`; sets `model_id` in state
 - [ ] **Mixture of Agents (MoA)**: multiple small models vote; aggregate answer; used when single model unreliable
 - [ ] LiteLLM router: primary → fallback on error/timeout; budget limits per model; single SDK
 
