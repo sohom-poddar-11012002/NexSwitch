@@ -36,8 +36,13 @@ RUN mvn package -DskipTests -pl services/qa-orchestrator -am -q
 
 FROM eclipse-temurin:26-jdk AS runtime
 WORKDIR /app
+# LEARN: docker.io CLI in the QA orchestrator runtime — ChaosTestAdapter calls
+#        `docker pause / unpause` via ProcessBuilder to inject infra faults.
+#        The Docker socket is mounted from the host (see docker-compose.yml).
+#        On Mac/Windows Docker Desktop the socket is world-accessible; on Linux
+#        add group_add: ["999"] (or the actual docker GID) to docker-compose.
 RUN apt-get update -q && \
-    apt-get install -yq --no-install-recommends curl && \
+    apt-get install -yq --no-install-recommends curl docker.io && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd --system payments && \
     useradd --system --gid payments --no-create-home --shell /bin/false payments
