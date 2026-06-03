@@ -10,9 +10,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 // LEARN: SseEmitter — Spring's server-sent event abstraction; one emitter per connected browser tab.
 //        Events push to all subscribers for the run, so the portal gets live step updates
@@ -25,12 +29,27 @@ public class SseEventPublisher implements ExecutionEventPublisher {
     // One list of emitters per executionId — multiple browser tabs can subscribe
     private final Map<UUID, CopyOnWriteEmitterList> emitters = new ConcurrentHashMap<>();
 
+    // LEARN: Event replay buffer — stores all events for each run so late subscribers
+    //        (browser navigated to /live after events fired) see the full history.
+    //        Capped at 500 events per run to bound memory usage.
+    private final Map<UUID, List<Map<String, Object>>> replayBuffers = new ConcurrentHashMap<>();
+    private static final int MAX_REPLAY = 500;
+
     public SseEmitter subscribe(UUID executionId) {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         emitters.computeIfAbsent(executionId, k -> new CopyOnWriteEmitterList()).add(emitter);
         emitter.onCompletion(() -> removeEmitter(executionId, emitter));
         emitter.onTimeout(()    -> removeEmitter(executionId, emitter));
         emitter.onError(e      -> removeEmitter(executionId, emitter));
+        // LEARN: Tomcat buffers the HTTP response until the first byte is written.
+        //        Sending an SSE comment immediately forces Tomcat to flush the 200 headers
+        //        so the browser's EventSource sees the connection as established right away.
+        try { emitter.send(SseEmitter.event().comment("connected")); } catch (IOException ignored) {}
+        // Replay buffered events so late subscribers see the full run history
+        List<Map<String, Object>> buffered = replayBuffers.getOrDefault(executionId, List.of());
+        for (Map<String, Object> payload : buffered) {
+            try { emitter.send(SseEmitter.event().data(payload)); } catch (IOException ignored) { break; }
+        }
         return emitter;
     }
 
@@ -89,6 +108,12 @@ public class SseEventPublisher implements ExecutionEventPublisher {
         // Close all emitters for this run — stream is done
         CopyOnWriteEmitterList list = emitters.remove(executionId);
         if (list != null) list.completeAll();
+        // Keep replay buffer alive for 60 s so late-loading browser tabs can catch up,
+        // then evict to free memory.
+        Thread.ofVirtual().start(() -> {
+            try { Thread.sleep(60_000); } catch (InterruptedException ignored) {}
+            replayBuffers.remove(executionId);
+        });
     }
 
     @Override
@@ -108,11 +133,21 @@ public class SseEventPublisher implements ExecutionEventPublisher {
     }
 
     private void broadcast(UUID executionId, String eventType, Map<String, Object> data) {
+        // LEARN: EventSource.onmessage only fires for unnamed SSE events (no "event:" field).
+        //        Named events require addEventListener('eventType', ...) — instead we embed
+        //        the type in the JSON body so the single onmessage handler sees everything.
+        Map<String, Object> payload = new java.util.HashMap<>(data);
+        payload.put("type", eventType);
+        // Buffer for late subscribers
+        replayBuffers.computeIfAbsent(executionId, k -> Collections.synchronizedList(new ArrayList<>()))
+                     .add(payload);
+        // Cap replay buffer size
+        List<Map<String, Object>> buf = replayBuffers.get(executionId);
+        if (buf != null && buf.size() > MAX_REPLAY) buf.remove(0);
+
         CopyOnWriteEmitterList list = emitters.get(executionId);
         if (list == null) return;
-        SseEmitter.SseEventBuilder event = SseEmitter.event()
-                .name(eventType)
-                .data(data);
+        SseEmitter.SseEventBuilder event = SseEmitter.event().data(payload);
         list.send(event, executionId, eventType);
     }
 

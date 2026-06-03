@@ -1,10 +1,10 @@
 run:
   id: golden-path-run
   name: "Golden path — authorization happy path"
-  description: "Runs Visa, RuPay, Mastercard approvals sequentially. STATEFUL so captured responses flow forward."
+  description: "Runs Visa, RuPay, Mastercard approvals sequentially. STATELESS so each scenario gets its own PAN/amount context."
 
   session:
-    mode: STATEFUL
+    mode: STATELESS
     isolate_on_failure: true
 
   variables:
@@ -17,5 +17,6 @@ run:
     - id: mastercard-auth-approved
     - id: amex-auth-approved
     - id: diners-auth-approved
+    - id: reset-atc-watermarks
     - id: emv-chip-arqc-approved
     - id: chip-pin-dukpt-approved

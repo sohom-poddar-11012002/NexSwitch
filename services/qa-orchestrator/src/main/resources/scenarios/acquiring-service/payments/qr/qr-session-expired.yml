@@ -28,5 +28,5 @@ scenario:
       fail_fast: true
 
     - type: assert
-      expression: "response_body.contains('reason')"
-      description: "404 response must include a reason explaining the session is not found"
+      expression: "response_body.contains('not found')"
+      description: "404 response must explain session is not found"

@@ -10,8 +10,11 @@ run:
   variables:
     terminal_id: "TERM0042"
     merchant_id: "MERCH0000999"
+    rest_base_url: "http://acquiring-service:8080"
+    rest_api_key: "dev-api-key-change-me"
 
   scenarios:
     - id: replay-attack
     - id: oversized-field
+    - id: reset-atc-watermarks
     - id: emv-chip-arqc-invalid

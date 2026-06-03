@@ -11,7 +11,7 @@ CREATE TABLE reconciliation_network_records (
     arn                     VARCHAR(23)   NOT NULL,
     amount                  NUMERIC(15,2) NOT NULL,
     interchange_charged     NUMERIC(10,2),
-    network_response_code   CHAR(2),
+    network_response_code   VARCHAR(2),
     transaction_date        DATE          NOT NULL,
     batch_id                VARCHAR(50),
     raw_line                TEXT,

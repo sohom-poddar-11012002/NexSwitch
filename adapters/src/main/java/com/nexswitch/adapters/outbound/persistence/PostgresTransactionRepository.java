@@ -1,5 +1,6 @@
 package com.nexswitch.adapters.outbound.persistence;
 
+import com.nexswitch.adapters.outbound.persistence.entity.TransactionEntity;
 import com.nexswitch.adapters.outbound.persistence.jpa.JpaTransactionRepository;
 import com.nexswitch.adapters.outbound.persistence.mapper.TransactionMapper;
 import com.nexswitch.domain.model.Transaction;
@@ -44,7 +45,15 @@ public class PostgresTransactionRepository implements TransactionRepository {
         // LEARN: pullDomainEvents() clears the event list on the aggregate — must be called
         //        before toEntity() so events are not lost when the builder copies state.
         List<DomainEvent<?>> events = transaction.pullDomainEvents();
-        Transaction saved = mapper.toDomain(jpa.save(mapper.toEntity(transaction)));
+        TransactionEntity entity = mapper.toEntity(transaction);
+        // LEARN: @Version causes Spring Data JPA to call persist() (INSERT) when version==null,
+        //        even if the row already exists. The domain record has no version field, so every
+        //        re-mapped entity has version=null. Fix: copy the current DB version so that
+        //        subsequent saves use merge() (UPDATE) with the correct optimistic-lock version.
+        if (entity.getVersion() == null) {
+            jpa.findById(entity.getId()).ifPresent(e -> entity.setVersion(e.getVersion()));
+        }
+        Transaction saved = mapper.toDomain(jpa.save(entity));
         // LEARN: @TransactionalEventListener(AFTER_COMMIT) guarantees DB is committed BEFORE Kafka
         //        receives the event. Publishing inside the transaction risks Kafka seeing the event
         //        before DB writes are visible — a read-your-writes violation under high concurrency.

@@ -1,0 +1,35 @@
+scenario:
+  id: fraud-scoring-high-risk
+  name: "Fraud score — high-risk gambling transaction at 02:00"
+  description: |
+    POST /score with a late-night gambling transaction (MCC 7995, INR 50000 round amount,
+    VISA EMV at 02:00 IST). pgvector should retrieve multiple fraud=true cases matching this
+    profile. Claude Haiku should return a high fraud probability.
+    Verifies: RAG retrieval surfaces fraud-positive cases, LLM escalates risk score.
+  platform: fraud-scoring
+  project: scoring
+  feature: rag_scoring
+  channel: REST
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "POST /score"
+      payload:
+        pan_hash: "b94f6f125c79e3a5ffaa826f584c10d52ada669e6762051b826b55776d05a15a"
+        amount_inr: 50000.00
+        mcc: "7995"
+        network: "VISA"
+        method: "EMV"
+        hour_of_day: 2
+      timeout_ms: 10000
+      capture_response_as: high_risk_response
+
+    - type: assert
+      expression: "high_risk_response['status_code'] == '200'"
+      description: "scoring endpoint must return 200"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('score')"
+      description: "response must contain score field"

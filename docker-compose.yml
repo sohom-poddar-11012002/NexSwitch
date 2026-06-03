@@ -18,7 +18,7 @@ services:
         condition: service_started
     networks: [public, internal]
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -26,7 +26,10 @@ services:
   # ─── Infrastructure ──────────────────────────────────────────────────────────
 
   postgres:
-    image: postgres:18-alpine
+    # pgvector/pgvector:pg17 has the vector extension pre-installed.
+    # NOTE: switching from postgres:18-alpine requires recreating the volume once:
+    #   docker-compose down -v && docker-compose up -d
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_DB: nexswitch
       POSTGRES_USER: nexswitch_app
@@ -34,6 +37,7 @@ services:
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql
+    networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nexswitch_app -d nexswitch"]
       interval: 10s
@@ -45,6 +49,7 @@ services:
     image: redis:8-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD:-local_dev_password}
     ports: ["6379:6379"]
+    networks: [internal]
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-local_dev_password}", "ping"]
       interval: 10s
@@ -55,6 +60,7 @@ services:
     image: confluentinc/cp-kafka:8.2.0
     hostname: kafka
     ports: ["9092:9092"]
+    networks: [internal]
     environment:
       # LEARN: KRaft mode — Kafka 3.3+ can run without ZooKeeper; the broker
       #        also acts as controller, storing metadata in its own replicated log.
@@ -83,10 +89,12 @@ services:
     ports:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI
+    networks: [internal]
 
   localstack:
     image: localstack/localstack:4.4.0
     ports: ["4566:4566"]
+    networks: [internal]
     environment:
       SERVICES: s3
       DEFAULT_REGION: ap-south-1
@@ -97,6 +105,7 @@ services:
     ports:
       - "16686:16686"   # UI
       - "4317:4317"     # OpenTelemetry gRPC
+    networks: [internal]
     environment:
       SPAN_STORAGE_TYPE: memory
       COLLECTOR_OTLP_ENABLED: "true"
@@ -109,16 +118,18 @@ services:
   pgadmin:
     image: dpage/pgadmin4:9.4
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@nexswitch.local
+      PGADMIN_DEFAULT_EMAIL: admin@nexswitch.dev
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports: ["5050:80"]
+    networks: [internal]
     depends_on: [postgres]
 
   kafka-ui:
     image: ghcr.io/kafbat/kafka-ui:v1.3.0
     ports: ["8082:8080"]
+    networks: [internal]
     environment:
       KAFKA_CLUSTERS_0_NAME: nexswitch-local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
@@ -129,6 +140,7 @@ services:
   redisinsight:
     image: redis/redisinsight:2.68.0
     ports: ["5540:5540"]
+    networks: [internal]
     depends_on: [redis]
 
   # ─── Services ────────────────────────────────────────────────────────────────
@@ -140,6 +152,11 @@ services:
     ports:
       - "8090:8090"   # REST (main server port)
       - "8091:8091"   # Management / actuator
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -171,6 +188,11 @@ services:
       - "8081:8081"   # Management / actuator — exposed for local dev health checks
     expose:
       - "8080"        # REST — internal only; nginx routes /api/v1/payments to this port
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -182,6 +204,8 @@ services:
       HSM_PROVIDER: ${HSM_PROVIDER:-mock}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
       SPRING_PROFILES_ACTIVE: local
+      FRAUD_SCORING_ENABLED: "true"
+      FRAUD_SCORING_URL: "http://fraud-scoring:8090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -190,6 +214,8 @@ services:
       kafka:
         condition: service_healthy
       mock-upstream:
+        condition: service_healthy
+      fraud-scoring:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health/readiness || exit 1"]
@@ -203,6 +229,11 @@ services:
       context: .
       dockerfile: services/payment-switch/Dockerfile
     ports: ["8100:8100"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -225,6 +256,11 @@ services:
       - "8086:8086"   # Management / actuator — exposed for local dev health checks
     expose:
       - "8085"        # REST — internal only; nginx routes /api/v1/webhooks to this port
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -240,15 +276,35 @@ services:
       context: .
       dockerfile: services/merchant-simulator/Dockerfile
     ports: ["9000:9000"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     environment:
+      DB_URL: jdbc:postgresql://postgres:5432/nexswitch
+      DB_USERNAME: nexswitch_app
+      DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local
-    depends_on: [webhook-dispatcher]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      webhook-dispatcher:
+        condition: service_started
 
   settlement-service:
     build:
       context: .
       dockerfile: services/settlement-service/Dockerfile
     ports: ["8300:8300"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -265,6 +321,11 @@ services:
       context: .
       dockerfile: services/reconciliation-service/Dockerfile
     ports: ["8400:8400"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -281,6 +342,11 @@ services:
       context: .
       dockerfile: services/notification-service/Dockerfile
     ports: ["8500:8500"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -306,6 +372,11 @@ services:
       context: .
       dockerfile: services/chargeback-service/Dockerfile
     ports: ["8600:8600"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
@@ -321,17 +392,47 @@ services:
   frontend-simulator:
     build: frontend/simulator
     ports: ["3000:80"]
+    networks: [internal]
     depends_on: [acquiring-service]
 
   frontend-dashboard:
     build: frontend/dashboard
     ports: ["3001:80"]
+    networks: [internal]
     depends_on: [acquiring-service]
 
   frontend-ops:
     build: frontend/ops
     ports: ["3002:80"]
+    networks: [internal]
     depends_on: [acquiring-service, settlement-service, reconciliation-service]
+
+  # ─── AI / ML Services ────────────────────────────────────────────────────────
+
+  fraud-scoring:
+    build:
+      context: services/fraud-scoring
+      dockerfile: Dockerfile
+    expose: ["8090"]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          # LEARN: sentence-transformers + torch-cpu needs ~700MB RAM at inference.
+          #        1.5g is the safe ceiling for the Python process including torch overhead.
+          memory: 1536m
+    environment:
+      DB_URL: postgresql://nexswitch_app:${DB_PASSWORD:-local_dev_password}@postgres:5432/nexswitch
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8090/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
 
   # ─── QA Platform — DEV / STAGING ONLY, NEVER PRODUCTION ─────────────────────
   # qa-orchestrator fires real ISO 8583 authorization requests, has chaos injection
@@ -345,14 +446,19 @@ services:
       dockerfile: services/qa-orchestrator/Dockerfile
     # no host port — only reachable from frontend-qa-portal via the internal network
     expose: ["8700"]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/nexswitch
       DB_USERNAME: nexswitch_app
       DB_PASSWORD: ${DB_PASSWORD:-local_dev_password}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      QA_ISO8583_HOST: acquiring-service
-      QA_ISO8583_PORT: 8000
+      ISO8583_SWITCH_HOST: acquiring-service
+      ISO8583_SWITCH_PORT: 8000
       QA_INTERNAL_API_KEY: ${QA_INTERNAL_API_KEY:-local-dev-qa-key}
+      QA_CHANNEL_PLAYWRIGHT_ENABLED: "true"
       SPRING_PROFILES_ACTIVE: local
     networks: [internal]
     depends_on:
@@ -381,7 +487,7 @@ services:
       qa-orchestrator:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:3003/"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3003/ || exit 1"]
       interval: 15s
       timeout: 5s
       start_period: 30s

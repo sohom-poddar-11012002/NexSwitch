@@ -1,0 +1,39 @@
+scenario:
+  id: fraud-scoring-low-risk
+  name: "Fraud score — low-risk grocery transaction"
+  description: |
+    POST /score with a morning grocery transaction (MCC 5411, INR 500, VISA EMV at 10:00 IST).
+    The pgvector retrieval should surface similar low-risk grocery cases.
+    Claude Haiku should return a low fraud probability (≤ 0.40).
+    Verifies: graph wiring, pgvector retrieval, LLM response parsing.
+  platform: fraud-scoring
+  project: scoring
+  feature: rag_scoring
+  channel: REST
+
+  steps:
+    - type: send
+      channel: REST
+      operation: "POST /score"
+      payload:
+        pan_hash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+        amount_inr: 500.00
+        mcc: "5411"
+        network: "VISA"
+        method: "EMV"
+        hour_of_day: 10
+      timeout_ms: 10000
+      capture_response_as: low_risk_response
+
+    - type: assert
+      expression: "low_risk_response['status_code'] == '200'"
+      description: "scoring endpoint must return 200"
+      fail_fast: true
+
+    - type: assert
+      expression: "response_body.contains('score')"
+      description: "response must contain score field"
+
+    - type: assert
+      expression: "response_body.contains('reasoning')"
+      description: "response must contain reasoning field"

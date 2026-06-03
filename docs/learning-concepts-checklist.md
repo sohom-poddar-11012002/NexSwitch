@@ -1115,6 +1115,62 @@ Oct 1 → Dec 31     (13 weeks)  POLISH + APPLY PHASE
 - [ ] Fraud use case: find past transactions similar to current one → check if they were fraudulent
 - [ ] Query: `SELECT * FROM transaction_embeddings ORDER BY embedding <=> $1 LIMIT 5`
 - [ ] HNSW index: approximate nearest neighbour at milliseconds latency for millions of vectors
+- [ ] `<=>` cosine distance, `<->` L2 distance, `<#>` inner product — choose based on whether vectors are normalised
+- [ ] Why Postgres over Pinecone: one fewer service, ACID guarantees, joins with transaction data
+
+### RAG Pipeline — Retrieval-Augmented Generation — P1 🔥
+- [ ] Retrieve relevant documents from vector store → inject as context into LLM prompt
+- [ ] Fraud use case: 5 most similar historical cases in prompt → LLM classifies current transaction
+- [ ] Why RAG over fine-tuning: updated seed data immediately changes model behaviour; no retraining
+- [ ] Pipeline: `query → embed → ANN search → [optional rerank] → inject into prompt → LLM response`
+- [ ] **Chunk granularity matters**: too coarse → noise injected; too fine → context lost
+
+### Document Chunking — P1 🔥
+- [ ] **Fixed-size**: split every N characters/tokens with overlap (simplest; ignores semantics)
+- [ ] **Recursive character splitter**: split on `\n\n` → `\n` → `.` → ` ` progressively (LangChain default)
+- [ ] **Semantic chunking**: embed each sentence; split where cosine distance between consecutive sentences spikes
+- [ ] **Overlap**: repeat last ~20% of previous chunk — prevents context loss at split boundaries
+- [ ] Fraud use case: each seed `features_text` is a single atomic fact — no chunking needed (already granular)
+
+### IVFFlat vs HNSW Index — P1 🔥
+- [ ] **IVFFlat**: partitions vectors into `lists` clusters; query probes `ivfflat.probes` clusters (default 1)
+  - `WITH (lists = 10)` — target `sqrt(row_count)`; run `SET ivfflat.probes = 3` at query time for better recall
+  - Lower memory than HNSW; build is faster; acceptable for dev datasets
+- [ ] **HNSW**: hierarchical navigable small world graph; near-100% recall at sub-millisecond latency
+  - `USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64)`
+  - `SET hnsw.ef_search = 40` — higher = more accurate, slower; tune per SLA
+  - ~2GB memory per 1M 384-dim float32 vectors; switch from IVFFlat at 10k+ rows
+- [ ] This project uses IVFFlat (`lists = 10`) — 25 seed rows means the index is an exact scan anyway
+
+### Embedding Model Selection — P1
+- [ ] `all-MiniLM-L6-v2` — 384 dims, ~90 MB, ~14k tokens/s on CPU; strong general semantic similarity
+- [ ] `text-embedding-3-small` (OpenAI) — 1536 dims (Matryoshka-truncatable to 256), cheap via API
+- [ ] `voyage-3-lite` (Anthropic partner) — optimised for retrieval over Claude-generated or finance text
+- [ ] Key trade-offs: embedding size vs storage, max input tokens, speed, domain alignment, on-prem vs API
+- [ ] **Matryoshka embeddings**: trained so first N dimensions retain most information; truncate to 256 dims = 4× faster query at small recall cost
+
+### Hybrid Search — BM25 + Vector — P2 🔥
+- [ ] **BM25** (keyword): scores by term frequency × inverse document frequency; misses synonyms
+- [ ] **Vector** (semantic): captures meaning; can miss exact matches ("INR 6000.00" vs "six thousand rupees")
+- [ ] **Hybrid**: run both → combine via **Reciprocal Rank Fusion (RRF)**
+  - `score = Σ 1 / (k + rank_i)` across result lists; `k = 60` typical; no manual weight tuning
+- [ ] Production options: ParadeDB (pgvector + BM25 in one Postgres extension) or pgvector + `pg_bm25`
+- [ ] When to use: document retrieval systems; less critical for structured fraud case matching (vectors enough)
+
+### Reranking — Cross-Encoder — P2 🔥
+- [ ] ANN retrieval gives top-K candidates fast (bi-encoder); reranker re-scores them with higher accuracy
+- [ ] **Bi-encoder**: query and document embedded independently → dot product → O(1) lookup
+- [ ] **Cross-encoder**: query + document fed together as one input → much more accurate but O(n) per candidate
+- [ ] **Cohere Rerank**: API — send query + top-20 candidates → get reranked list; ~100ms latency
+- [ ] **BGE reranker**: `BAAI/bge-reranker-base` — self-hosted; ~500ms for 20 candidates on CPU
+- [ ] Pattern: ANN top-20 → reranker → top-5 → inject into prompt; avoids bloating context with noisy retrievals
+
+### Vector Quantization — P2 🔥
+- [ ] **Scalar quantization (int8)**: each `float32` → `int8`; 4× smaller, ~1% recall loss
+- [ ] **Binary quantization**: each dimension → 1 bit; 32× smaller, higher loss; recover precision with reranking
+- [ ] **Product quantization (PQ)**: split vector into M sub-vectors, quantize each independently (FAISS standard)
+- [ ] pgvector 0.7+: native `halfvec` (16-bit float) and `bit` (binary) column + index types
+- [ ] Trade-off: always benchmark recall@K before and after quantization; int8 is usually safe; binary needs reranking
 
 ### LLM Observability + Evals — P2 🔥
 - [ ] **Langfuse** — track every LLM call: prompt, response, latency, tokens, cost; self-hosted; no data leaves infra

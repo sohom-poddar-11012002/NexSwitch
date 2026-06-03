@@ -3,7 +3,7 @@
 CREATE TABLE merchant_reserve_accounts (
     merchant_id     VARCHAR(50)     PRIMARY KEY,
     balance         NUMERIC(15,2)   NOT NULL DEFAULT 0,
-    currency        CHAR(3)         NOT NULL DEFAULT 'INR',
+    currency        VARCHAR(3)         NOT NULL DEFAULT 'INR',
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 

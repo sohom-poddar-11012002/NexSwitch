@@ -1,5 +1,6 @@
 import { fetchRuns, fetchExecutions, type TestRun, type RunExecution } from "@/lib/api";
 import RunTriggerForm from "@/app/components/RunTriggerForm";
+import LocalTime from "@/app/components/LocalTime";
 import Link from "next/link";
 
 export default async function RunsPage() {
@@ -50,7 +51,7 @@ export default async function RunsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-[var(--muted)]">
-                      {new Date(e.startedAt).toLocaleTimeString()}
+                      <LocalTime iso={e.startedAt} />
                     </span>
                     <StatusBadge status={e.status} />
                   </div>

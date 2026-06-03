@@ -15,7 +15,9 @@ public class VariableResolver {
 
     private static final Pattern VAR_PATTERN = Pattern.compile("\\{\\{([^}]+)}}");
 
-    private final AtomicInteger stanCounter = new AtomicInteger(1);
+    // LEARN: Seed from epoch millis so counter starts at a different position after each restart,
+    //        preventing STAN collisions with transactions persisted in prior runs.
+    private final AtomicInteger stanCounter = new AtomicInteger((int) (System.currentTimeMillis() % 1_000_000));
 
     public String resolve(String template, Map<String, Object> context) {
         if (template == null) return null;

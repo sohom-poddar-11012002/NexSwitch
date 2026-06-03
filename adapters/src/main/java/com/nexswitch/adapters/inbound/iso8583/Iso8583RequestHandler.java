@@ -26,12 +26,14 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
 
     private static final Logger log = LoggerFactory.getLogger(Iso8583RequestHandler.class);
 
-    private static final String RC_APPROVED     = "00";
-    private static final String RC_INVALID_CARD = "14";
-    private static final String RC_ERROR        = "30";
-    private static final String RC_FRAUD        = "59";
-    private static final String RC_SWITCH_INOP  = "91";
-    private static final Currency INR           = Currency.getInstance("INR");
+    private static final String RC_APPROVED          = "00";
+    private static final String RC_INVALID_CARD      = "14";
+    private static final String RC_INVALID_TRANSACTION = "12";
+    private static final String RC_NOT_PERMITTED     = "57";
+    private static final String RC_ERROR             = "30";
+    private static final String RC_FRAUD             = "59";
+    private static final String RC_SWITCH_INOP       = "91";
+    private static final Currency INR                = Currency.getInstance("INR");
 
     private final GenericPackager packager;
     private final ProcessPaymentUseCase processPaymentUseCase;
@@ -74,6 +76,18 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
         String cardLast4 = pan.length() >= 4 ? pan.substring(pan.length() - 4) : pan;
         PanHash panHash = PanHash.fromRawPan(pan);
         Money amount = parseAmount(req.getString(4), req.getString(49));
+
+        // LEARN: Zero-amount and wrong-currency checks belong in the adapter (format/value guards),
+        //        not in the domain. The domain only receives semantically valid inputs.
+        if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("iso8583.zero_amount stan={}", req.getString(11));
+            return errorResponse(req, RC_INVALID_TRANSACTION);
+        }
+        if (!INR.equals(amount.currency())) {
+            log.warn("iso8583.unsupported_currency stan={} currency={}", req.getString(11), amount.currency());
+            return errorResponse(req, RC_NOT_PERMITTED);
+        }
+
         TerminalId terminalId = TerminalId.of(sanitizeTerminalId(req.getString(41)));
         MerchantId merchantId = MerchantId.of(sanitizeMerchantId(req.getString(42)));
         SystemTraceAuditNumber stan = SystemTraceAuditNumber.of(req.getString(11));
@@ -115,6 +129,13 @@ public class Iso8583RequestHandler extends SimpleChannelInboundHandler<ISOMsg> {
             result = processPaymentUseCase.execute(command);
         } catch (CallNotPermittedException e) {
             log.warn("iso8583.circuit_open stan={} circuit={}", req.getString(11), e.getCausingCircuitBreakerName());
+            return errorResponse(req, RC_SWITCH_INOP);
+        } catch (Exception e) {
+            // LEARN: Broad catch here ensures any unexpected infrastructure failure (Redis timeout,
+            //        DB connection pool exhausted, etc.) returns RC=91 (switch inoperative) rather
+            //        than crashing the Netty channel — which would close the connection entirely,
+            //        giving the terminal no response at all.
+            log.error("iso8583.unexpected_error stan={}", req.getString(11), e);
             return errorResponse(req, RC_SWITCH_INOP);
         }
         log.info("iso8583.auth_result stan={} outcome={}", req.getString(11), result.getClass().getSimpleName());
