@@ -28,11 +28,11 @@ scenario:
       fail_fast: true
 
     - type: assert
-      expression: "recon_response['json_mismatchCount'] is not None"
+      expression: "recon_response['json_mismatchCount'] != null"
       description: "mismatchCount must be present in response"
       fail_fast: true
 
     - type: assert
-      expression: "recon_response['json_summaryFileKey'] is not None"
+      expression: "recon_response['json_summaryFileKey'] != null"
       description: "summaryFileKey must identify the run date"
       fail_fast: false

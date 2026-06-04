@@ -46,7 +46,7 @@ public class AssertionEvaluator implements ExpressionEvaluator {
             boolean passed = Boolean.TRUE.equals(result) || "true".equalsIgnoreCase(String.valueOf(result));
             return new EvaluationResult(passed, String.valueOf(result),
                     passed ? "OK" : "expression evaluated to: " + result);
-        } catch (EvaluationException e) {
+        } catch (Exception e) {
             return new EvaluationResult(false, null, "SpEL error: " + e.getMessage());
         }
     }

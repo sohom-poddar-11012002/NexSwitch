@@ -37,6 +37,7 @@ services:
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql
+      - ./services/postgres/init:/docker-entrypoint-initdb.d:ro
     networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nexswitch_app -d nexswitch"]
@@ -85,10 +86,10 @@ services:
       retries: 5
 
   mailhog:
-    image: mailhog/mailhog:v1.0.1
+    image: axllent/mailpit:latest
     ports:
       - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
+      - "8025:8025"   # Web UI (mailpit UI compatible)
     networks: [internal]
 
   localstack:
@@ -464,8 +465,9 @@ services:
       QA_CHANNEL_PLAYWRIGHT_ENABLED: "true"
       SPRING_PROFILES_ACTIVE: local
     # Mount Docker socket so ChaosTestAdapter can pause/unpause sibling containers.
-    # Mac/Windows Docker Desktop: socket is world-accessible (no group_add needed).
-    # Linux: add group_add: ["999"] if the payments user can't access the socket.
+    # group_add "0" gives the payments user access to the root-owned docker socket.
+    group_add:
+      - "0"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks: [internal]

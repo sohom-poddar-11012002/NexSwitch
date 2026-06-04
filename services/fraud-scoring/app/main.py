@@ -3,7 +3,9 @@ import os
 from contextlib import asynccontextmanager
 
 from anthropic import Anthropic
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from .cache import SemanticCache
 from .db import FraudCaseDB
@@ -54,6 +56,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Fraud Scoring Service", version="1.0.0", lifespan=lifespan)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    body = await request.body()
+    log.error("fraud.validation_error body=%s errors=%s", body.decode()[:200], exc.errors())
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 @app.get("/health")

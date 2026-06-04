@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 # LEARN: LangGraph StateGraph — each node is a pure function (state_in → partial_state_out).
 #        The framework merges returned dicts into the shared state between nodes.
-#        Graph: describe → hypothesize → retrieve → rerank → route → score.
+#        Graph: describe → hypothesize → retrieve → rerank → route → compute_score.
 #        route (LLM routing) and hypothesize (HyDE) keep the graph topology linear —
 #        state flags (skip_llm, model_id) avoid conditional edges entirely.
 class FraudState(TypedDict):
@@ -241,12 +241,12 @@ def build_graph(db, embed_fn: Callable[[str], list[float]], client: Anthropic, c
     g.add_node("retrieve", retrieve)
     g.add_node("rerank", rerank)
     g.add_node("route", route)
-    g.add_node("score", score)
+    g.add_node("compute_score", score)
     g.set_entry_point("describe")
     g.add_edge("describe", "hypothesize")
     g.add_edge("hypothesize", "retrieve")
     g.add_edge("retrieve", "rerank")
     g.add_edge("rerank", "route")
-    g.add_edge("route", "score")
-    g.add_edge("score", END)
+    g.add_edge("route", "compute_score")
+    g.add_edge("compute_score", END)
     return g.compile()
