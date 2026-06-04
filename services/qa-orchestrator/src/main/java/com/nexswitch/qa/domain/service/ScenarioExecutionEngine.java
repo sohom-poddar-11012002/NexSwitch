@@ -143,7 +143,7 @@ public class ScenarioExecutionEngine {
                 ctx.put(step.captureResponseAs(), result.captured());
             }
             return result;
-        } catch (Exception e) {
+        } catch (Exception | AssertionError e) {
             log.error("qa.step.send_failed stepId={} operation={}", stepId, step.operation(), e);
             return new StepResult.Failed(stepId, e.getMessage(), null, null, elapsed(start));
         }

@@ -10,7 +10,7 @@ run:
     mode: STATELESS
 
   variables:
-    rest_base_url: "http://acquiring-service:8080"
+    rest_base_url: "http://reconciliation-service:8400"
     rest_api_key: "dev-api-key-change-me"
 
   scenarios:

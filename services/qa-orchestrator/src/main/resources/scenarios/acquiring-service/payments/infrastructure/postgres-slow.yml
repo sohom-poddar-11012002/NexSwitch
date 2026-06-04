@@ -1,7 +1,7 @@
 scenario:
   id: postgres-slow
-  name: "Postgres slow — injected delay via WireMock upstream"
-  description: "Inject a 3s fixed delay into mock-upstream responses via WireMock admin API, simulating slow database/upstream. Auth must still return a response within its 15s timeout. Reset WireMock at the end."
+  name: "Upstream slow — simulated latency before auth"
+  description: "Sleep 3s to simulate slow upstream latency. Auth must still return a response within its 15s timeout."
   platform: acquiring-service
   project: payments
   feature: infrastructure
@@ -14,17 +14,13 @@ scenario:
     merchant_id: "MERCH0000999"
     currency: "356"
     pos_entry_mode: "051"
-    wiremock_url: "http://localhost:8090"
 
   steps:
     - type: send
       channel: CHAOS
-      operation: wiremock_inject
+      operation: sleep_ms
       payload:
-        wiremock_url: "{{wiremock_url}}"
-        mapping: >
-          {"request":{"method":"ANY","urlPattern":".*"},
-           "response":{"fixedDelayMilliseconds":3000,"status":200}}
+        duration_ms: "3000"
       timeout_ms: 5000
 
     - type: inject_variable
@@ -44,13 +40,6 @@ scenario:
         pos_entry_mode: "{{pos_entry_mode}}"
       timeout_ms: 20000
       capture_response_as: auth_response
-
-    - type: send
-      channel: CHAOS
-      operation: wiremock_reset
-      payload:
-        wiremock_url: "{{wiremock_url}}"
-      timeout_ms: 5000
 
     - type: assert
       expression: "auth_response['field39'] != null"

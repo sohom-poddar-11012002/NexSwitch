@@ -53,13 +53,11 @@ public class KafkaAssertionAdapter implements TestChannelPort {
 
         // LEARN: createConsumer() factory — production returns new KafkaConsumer(consumerProps());
         //        tests override to inject a mock without a real broker.
-        // LEARN: seek-to-end pattern — poll once to trigger partition assignment, then
-        //        seekToEnd() so we only see messages produced after this assertion started.
-        //        Prevents flaky tests that accidentally match stale events from a prior run.
+        // LEARN: earliest offset reset — docker run always starts with down -v (clean volume),
+        //        so there are no stale events. Reading from offset 0 guarantees we see the event
+        //        even when the consumer subscribes after acquiring-service published it.
         try (KafkaConsumer<String, String> consumer = createConsumer()) {
             consumer.subscribe(List.of(topic));
-            consumer.poll(Duration.ofMillis(200)); // force partition assignment
-            consumer.seekToEnd(consumer.assignment());
 
             long deadlineMs = System.currentTimeMillis() + step.timeout().toMillis();
             while (System.currentTimeMillis() < deadlineMs) {
@@ -93,7 +91,7 @@ public class KafkaAssertionAdapter implements TestChannelPort {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "qa-assert-" + UUID.randomUUID());
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());

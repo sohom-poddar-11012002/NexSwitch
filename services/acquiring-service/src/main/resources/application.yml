@@ -31,13 +31,15 @@ spring:
   flyway:
     enabled: true   # acquiring-service is the SOLE Flyway owner
     locations: classpath:db/migration
-    baseline-on-migrate: false
+    baseline-on-migrate: true
+    baseline-version: 0
 
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: 6379
       password: ${REDIS_PASSWORD:local_dev_password}
+      timeout: 2s
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

@@ -9,10 +9,15 @@ import com.nexswitch.qa.domain.port.outbound.TestChannelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -42,7 +47,7 @@ public class RestTestAdapter implements TestChannelPort {
     public StepResult.Passed execute(TestStep.Send step, Map<String, Object> context) throws Exception {
         Instant start = Instant.now();
         String[] parts  = parseOperation(step.operation());
-        String method   = parts[0];
+        String method   = parts[0].toUpperCase();
         String path     = parts[1];
 
         String baseUrl = resolveBaseUrl(context, step.channel());
@@ -50,50 +55,69 @@ public class RestTestAdapter implements TestChannelPort {
 
         String apiKey = resolveApiKey(context);
 
-        // LEARN: onStatus with empty handler suppresses RestClient's default behaviour of throwing
-        //        HttpClientErrorException on 4xx/5xx. QA scenarios intentionally test error paths
-        //        (e.g. assert status_code == '400') so we want to capture the error response, not throw.
-        ResponseEntity<String> response = switch (method.toUpperCase()) {
-            case "GET"    -> restClient.get().uri(url)
-                                .header("X-API-Key", apiKey)
-                                .retrieve()
-                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
-                                .toEntity(String.class);
-            case "DELETE" -> restClient.delete().uri(url)
-                                .header("X-API-Key", apiKey)
-                                .retrieve()
-                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
-                                .toEntity(String.class);
-            case "POST"   -> restClient.post().uri(url)
-                                .header("X-API-Key", apiKey)
-                                .body(step.payload()).retrieve()
-                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
-                                .toEntity(String.class);
-            case "PUT"    -> restClient.put().uri(url)
-                                .header("X-API-Key", apiKey)
-                                .body(step.payload()).retrieve()
-                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
-                                .toEntity(String.class);
-            case "PATCH"  -> restClient.patch().uri(url)
-                                .header("X-API-Key", apiKey)
-                                .body(step.payload()).retrieve()
-                                .onStatus(HttpStatusCode::isError, (req, res) -> {})
-                                .toEntity(String.class);
-            default -> throw new IllegalArgumentException("Unsupported HTTP method: " + method);
-        };
+        String serializedBody = step.payload() != null && !step.payload().isEmpty()
+                ? objectMapper.writeValueAsString(step.payload()) : "{}";
+        log.info("qa.rest.send method={} url={} payload_keys={} body={}", method, url,
+                step.payload() != null ? step.payload().keySet() : "null",
+                serializedBody.substring(0, Math.min(200, serializedBody.length())));
 
-        Map<String, Object> captured = new HashMap<>();
-        captured.put("status_code", String.valueOf(response.getStatusCode().value()));
-        captured.put("response_body", response.getBody());
-        String body = response.getBody();
-        if (body != null && (body.startsWith("{") || body.startsWith("["))) {
-            captured.put("response_json", body);
-            // LEARN: Top-level JSON fields extracted with json_ prefix so downstream inject_variable
-            //        steps can reference e.g. {{json_txnRef}} without a full JSONPath expression.
-            extractJsonFields(body, captured);
+        // LEARN: HttpURLConnection with setFixedLengthStreamingMode ensures Content-Length is sent
+        //        (not chunked transfer encoding), which is required by uvicorn/h11 for body parsing.
+        String responseBody;
+        int statusCode;
+
+        if (method.equals("GET") || method.equals("DELETE")) {
+            // Use RestClient for read-only methods (no body)
+            ResponseEntity<String> resp = method.equals("GET")
+                    ? restClient.get().uri(url)
+                            .header("X-API-Key", apiKey)
+                            .retrieve()
+                            .onStatus(HttpStatusCode::isError, (req, res) -> {})
+                            .toEntity(String.class)
+                    : restClient.delete().uri(url)
+                            .header("X-API-Key", apiKey)
+                            .retrieve()
+                            .onStatus(HttpStatusCode::isError, (req, res) -> {})
+                            .toEntity(String.class);
+            statusCode = resp.getStatusCode().value();
+            responseBody = resp.getBody();
+        } else {
+            // Use raw HttpURLConnection for body-bearing methods to guarantee Content-Length header
+            byte[] bodyBytes = serializedBody.getBytes(StandardCharsets.UTF_8);
+            HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+            try {
+                conn.setRequestMethod(method);
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                conn.setConnectTimeout(5_000);
+                conn.setReadTimeout((int) step.timeout().toMillis());
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Content-Length", String.valueOf(bodyBytes.length));
+                if (!apiKey.isEmpty()) conn.setRequestProperty("X-API-Key", apiKey);
+                conn.setFixedLengthStreamingMode(bodyBytes.length);
+                conn.connect();
+                conn.getOutputStream().write(bodyBytes);
+                conn.getOutputStream().flush();
+                statusCode = conn.getResponseCode();
+                InputStream is = statusCode < 400 ? conn.getInputStream() : conn.getErrorStream();
+                responseBody = is != null ? new String(is.readAllBytes(), StandardCharsets.UTF_8) : "";
+            } finally {
+                conn.disconnect();
+            }
         }
 
-        log.info("qa.rest.done method={} url={} status={}", method, url, response.getStatusCode().value());
+        Map<String, Object> captured = new HashMap<>();
+        captured.put("status_code", String.valueOf(statusCode));
+        captured.put("response_body", responseBody);
+        if (responseBody != null && (responseBody.startsWith("{") || responseBody.startsWith("["))) {
+            captured.put("response_json", responseBody);
+            // LEARN: Top-level JSON fields extracted with json_ prefix so downstream inject_variable
+            //        steps can reference e.g. {{json_txnRef}} without a full JSONPath expression.
+            extractJsonFields(responseBody, captured);
+        }
+
+        log.info("qa.rest.done method={} url={} status={} body_preview={}", method, url, statusCode,
+                responseBody != null ? responseBody.substring(0, Math.min(100, responseBody.length())) : "null");
         return new StepResult.Passed(step.operation(), Duration.between(start, Instant.now()), captured);
     }
 
