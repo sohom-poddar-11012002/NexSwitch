@@ -24,8 +24,8 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 // LEARN: KafkaAssertionAdapter uses a real KafkaConsumer internally; tests mock KafkaConsumer
-//        via a package-private constructor that accepts a ConsumerFactory — avoids full broker
-//        integration while verifying the seek-to-end + JSONPath matching logic.
+//        via a subclass that overrides createConsumer() — avoids a real broker while verifying
+//        the earliest-offset + JSONPath matching logic.
 @ExtendWith(MockitoExtension.class)
 class KafkaAssertionAdapterTest {
 
@@ -47,8 +47,6 @@ class KafkaAssertionAdapterTest {
         @SuppressWarnings("deprecation")
         ConsumerRecords<String, String> records = new ConsumerRecords<>(Map.of(tp, List.of(record)));
 
-        when(consumer.assignment()).thenReturn(java.util.Set.of(tp));
-        when(consumer.poll(Duration.ofMillis(200))).thenReturn(ConsumerRecords.empty());
         when(consumer.poll(Duration.ofMillis(500))).thenReturn(records);
 
         TestStep.Send step = new TestStep.Send(ChannelType.KAFKA_ASSERT, "assert_kafka_event",
@@ -65,7 +63,6 @@ class KafkaAssertionAdapterTest {
 
     @Test
     void eventNotFound_throwsAssertionError() {
-        lenient().when(consumer.assignment()).thenReturn(java.util.Set.of());
         lenient().when(consumer.poll(any(Duration.class))).thenReturn(ConsumerRecords.empty());
 
         TestStep.Send step = new TestStep.Send(ChannelType.KAFKA_ASSERT, "assert_kafka_event",
